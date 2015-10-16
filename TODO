@@ -1,0 +1,6 @@
+* Documentation
+* More samples: exception handling, chat server/client, embedded samples (custom allocators, working with exceptions disabled)
+* StreamTask
+* Incremental Any/SomeAwaiter
+* Promise to void* and back
+* Stackful coroutine - forward args, drop StackfulContext<R>
