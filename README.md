@@ -47,6 +47,7 @@ Your application can use different kinds of coroutines under the common `ut::Cor
 See helper function `ut::makeCoroutine()` for turning functors into coroutines.
 
 _Table 1. Creating coroutines on top of supported backends:_
+
 <table style="width:100%">
   <tr align="center">
     <td colspan="2">makeCoroutine(...) -> Coroutine<br>(CppAsync helper)</td>
@@ -77,6 +78,7 @@ _Awaitable_ is a concept for some operation whose result might not be immediatel
 For example, futures fit this description. So you could take `boost::future<R>` (which supports continuation), specialize `ut::AwaitableTraits`, and voilà, await operator works with Boost futures!
 
 _Table 2. Awaitable concept [(*)](#awt-traits). Given an awaitable object `awt`, and `ut::Awaiter*` awaiter:_
+
  Expression                | Return type | Description                                      
 ---------------------------|-------------|--------------------------------------------------
  `awt.isReady()`           | `bool`      | Check if `awt` has result or error.              
@@ -105,6 +107,7 @@ CppAsync provides a lightweight awaitable type called `ut::Task<R>` as default. 
 Awaitables are not intrinsically tied to coroutines. But coroutines serve well for coordinating and combining async operations. If only they implemented the `Awaiter` interface! The helper function `startAsync()` adds the necessary glue and exposes the coroutine itself as an awaitable `Task<R>`. This makes it possible to compose async operations as easily as regular functions.
 
 _Table 3. Creating async coroutines:_
+
 <table style="width:100%">
   <tr align="center">
     <td colspan="2">startAsync(...) -> Task&lt;R&gt;<br>(CppAsync helper)</td>
