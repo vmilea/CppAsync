@@ -260,4 +260,41 @@ public:
     static const bool value = type::value;
 };
 
+//
+// EnableIf
+//
+
+template <bool B>
+using EnableIf = typename std::enable_if<B, void*>::type;
+
+template <class T>
+using EnableIfVoid = EnableIf<IsVoid<T>::value>;
+
+template <class T>
+using DisableIfVoid = EnableIf<!IsVoid<T>::value>;
+
+template <class T>
+using EnableIfNoThrowCopyConstructible = EnableIf<std::is_nothrow_copy_constructible<T>::value>;
+
+template <class T>
+using DisableIfNoThrowCopyConstructible = EnableIf<!std::is_nothrow_copy_constructible<T>::value>;
+
+template <class T>
+using EnableIfNoThrowMoveConstructible = EnableIf<std::is_nothrow_move_constructible<T>::value>;
+
+template <class T>
+using DisableIfNoThrowMoveConstructible = EnableIf<!std::is_nothrow_move_constructible<T>::value>;
+
+template <class T>
+using EnableIfNoThrowCopyable = EnableIf<IsNoThrowCopyable<T>::value>;
+
+template <class T>
+using DisableIfNoThrowCopyable = EnableIf<!IsNoThrowCopyable<T>::value>;
+
+template <class T>
+using EnableIfNoThrowMovable = EnableIf<IsNoThrowMovable<T>::value>;
+
+template <class T>
+using DisableIfNoThrowMovable = EnableIf<!IsNoThrowMovable<T>::value>;
+
 }

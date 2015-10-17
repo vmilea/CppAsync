@@ -21,8 +21,29 @@
 #include "util/Cast.h"
 #include "util/TypeTraits.h"
 #include "Awaitable.h"
+#include <iterator>
+#include <memory>
+
+namespace std
+{
+    template <class T>
+    class reference_wrapper;
+}
 
 namespace ut {
+
+namespace detail
+{
+    template <class T>
+    struct IsPlainAwtBaseReference : BoolConstant<
+        IsPlainReference<T>::value &&
+        std::is_base_of<AwaitableBase, RemoveReference<T>>::value> { };
+
+    template <class T>
+    struct IsPlainOrRvalueAwtBaseReference : BoolConstant<
+        IsPlainOrRvalueReference<T>::value &&
+        std::is_base_of<AwaitableBase, RemoveReference<T>>::value> { };
+}
 
 class AwaitableBase
 {
@@ -140,6 +161,37 @@ static_assert(sizeof(AwaitableBase) % max_align_size == 0,
 inline Error awaitable_takeError(AwaitableBase& awt) _ut_noexcept
 {
     return std::move(awt.error());
+}
+
+//
+// Selector shims
+//
+
+// Getting an error here means you are trying to use awaitAll/Any/Some on a collection of
+// unknown types. You can teach the library how to probe new types and access the underlying
+// awaitable by overloading selectAwaitable().
+
+inline AwaitableBase& selectAwaitable(AwaitableBase& awt) _ut_noexcept
+{
+    return awt;
+}
+
+template <class T>
+AwaitableBase& selectAwaitable(T *item) _ut_noexcept
+{
+    return selectAwaitable(*item);
+}
+
+template <class T, class Deleter>
+AwaitableBase& selectAwaitable(const std::unique_ptr<T, Deleter>& item) _ut_noexcept
+{
+    return selectAwaitable(*item);
+}
+
+template <class T>
+AwaitableBase& selectAwaitable(const std::reference_wrapper<T>& item) _ut_noexcept
+{
+    return selectAwaitable(item.get());
 }
 
 }

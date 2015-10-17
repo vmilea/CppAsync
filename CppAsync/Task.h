@@ -24,12 +24,6 @@
 #include "CommonAwaitable.h"
 #include <exception>
 
-namespace std
-{
-    template <class T>
-    class reference_wrapper;
-}
-
 namespace ut {
 
 //
@@ -832,35 +826,6 @@ namespace detail
     };
 }
 
-inline AwaitableBase& selectAwaitable(AwaitableBase& task) _ut_noexcept
-{
-    return task;
-}
-
-template <class T>
-AwaitableBase& selectAwaitable(T *item) _ut_noexcept
-{
-    return selectAwaitable(*item);
-}
-
-template <class T, class Deleter>
-AwaitableBase& selectAwaitable(const std::unique_ptr<T, Deleter>& item) _ut_noexcept
-{
-    return selectAwaitable(*item);
-}
-
-template <class T>
-AwaitableBase& selectAwaitable(const std::reference_wrapper<T>& item) _ut_noexcept
-{
-    return selectAwaitable(item.get());
-}
-
-template <class T, EnableIf<detail::HasTaskField<T>::value> = nullptr>
-AwaitableBase& selectAwaitable(T& item) _ut_noexcept
-{
-    return selectAwaitable(item.task);
-}
-
 // Awaitable shims
 
 template <class R>
@@ -873,6 +838,15 @@ template <class R>
 R awaitable_takeResult(Task<R>& task)
 {
     return std::move(task.result());
+}
+
+// Selector shims
+//
+
+template <class T, EnableIf<detail::HasTaskField<T>::value> = nullptr>
+AwaitableBase& selectAwaitable(T& item) _ut_noexcept
+{
+    return selectAwaitable(item.task);
 }
 
 }

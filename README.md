@@ -8,6 +8,7 @@
 * Portable C++11 library
 * Enables async/await pattern.
 * Helps you write clean, efficient, composable async code.
+* Await user defined types, like custom Futures!
 * Provides asymmetrical coroutines.
 * Can use several coroutine back-ends (Duff / Boost.Context / C++17 resumable functions).
 * Works with any kind of event loop (Qt / Boost.Asio / libuv etc.)
@@ -87,7 +88,7 @@ _Table 2. Awaitable concept [(*)](#awt-traits). Given an awaitable object `awt`,
  `awt.takeResult()`        | `R`         | Pop result out of `awt`.                         
  `awt.takeError()`         | `Error`     | Pop error out of `awt`.                          
 
-<a id="awt-traits">(*)</a>  Types that don't conform precisely to this definition may adapted through `ut::AwaitableTraits<T>`.
+<a id="awt-traits">(*)</a>  Types that don't conform precisely to this definition may be adapted through `ut::AwaitableTraits<T>`.
 
 While awaitables are trait based, `Awaiter`s must derive from a common interface:
 ```c++

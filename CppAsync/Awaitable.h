@@ -17,7 +17,7 @@
 #pragma once
 
 #include "impl/Common.h"
-#include "util/Meta.h"
+#include "util/TypeTraits.h"
 
 namespace ut {
 
@@ -29,32 +29,6 @@ struct AwaitableTraits;
 
 namespace detail
 {
-    template <class T>
-    struct IsPlainAwtBaseReference : BoolConstant<
-        IsPlainReference<T>::value &&
-        std::is_base_of<AwaitableBase, RemoveReference<T>>::value> { };
-
-    template <class T>
-    struct IsPlainOrRvalueAwtBaseReference : BoolConstant<
-        IsPlainOrRvalueReference<T>::value &&
-        std::is_base_of<AwaitableBase, RemoveReference<T>>::value> { };
-
-    template <class Container>
-    class IsAwtBaseContainer
-    {
-        static std::true_type checkTask(AwaitableBase&);
-
-        template <class T> static auto test(T *container)
-            -> decltype(checkTask(selectAwaitable(
-                std::declval<typename std::iterator_traits<IteratorOf<T>>::value_type&>())));
-
-        template <class T> static std::false_type test(...);
-
-    public:
-        using type = decltype(test<Container>(nullptr));
-        static const bool value = type::value;
-    };
-
     template <class C>
     class HasMethod_hasError
     {

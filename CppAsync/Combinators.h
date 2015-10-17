@@ -98,11 +98,6 @@ namespace detail
         static_assert(IsIterable<Container>::value,
                 "Container must provide begin() .. end()");
 
-        static_assert(IsAwtBaseContainer<Container>::value,
-                "Container must hold ut::AwaitableBase pointers or some wrapper type. "
-                "You can teach the library how to probe other types by overloading "
-                "selectAwaitable().");
-
         ut_dcheck(rAllValid(makeRange(awts)) &&
             "Can't combine invalid objects");
 
@@ -224,11 +219,6 @@ namespace detail
 
         static_assert(IsIterable<Container>::value,
             "Container must provide begin() .. end()");
-
-        static_assert(IsAwtBaseContainer<Container>::value,
-            "Container must hold ut::AwaitableBase pointers or some wrapper type. "
-            "You can teach the library how to probe other types by overloading "
-            "selectAwaitable().");
 
         ut_dcheck(rAllValid(makeRange(awts)) &&
             "Can't combine invalid objects");
