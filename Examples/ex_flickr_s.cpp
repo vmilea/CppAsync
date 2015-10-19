@@ -70,7 +70,7 @@ static ut::Task<void> asyncFlickrDownload(const std::vector<std::string>& tags,
         TransferSlot querySlot;
 
         Context()
-            : sslContext(asio::ssl::context::sslv3_client)
+            : sslContext(asio::ssl::context::tlsv12_client)
             , apiSocket(sIo, sslContext) { }
 
         int indexOf(DownloadSlot& dlSlot) const
