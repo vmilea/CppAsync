@@ -80,7 +80,7 @@ namespace detail
             {
                 impl::callChain().pop();
             }
-        };
+        }
 
         template <class F>
         struct CoroutineFunctionTraits
@@ -203,7 +203,7 @@ namespace detail
                 return yield_(YieldData(YK_Result, value)); // Suspend.
             }
 
-            void* yieldException_(std::exception_ptr *peptr)
+            void* yieldException_(Error *peptr)
             {
                 return yield_(YieldData(YK_Exception, peptr)); // Suspend.
             }
@@ -240,7 +240,7 @@ namespace detail
             {
                 CoroutineImplBase& thiz = *context::currentCoroutine();
 
-                std::exception_ptr *peptr = nullptr;
+                Error *peptr = nullptr;
                 try {
                     auto yInitial = ptrCast<YieldData *>(data); // safe cast
                     void *value = thiz.unpackYieldData(*yInitial);
@@ -254,12 +254,13 @@ namespace detail
                     ut_dcheck(thiz.mState == ST_Started &&
                         "Coroutine may not absorb ForcedUnwind exception");
 
-                    peptr = new std::exception_ptr(std::current_exception());
-                }
+#ifndef __GNUC__    // This check is disabled for now due to bugs in libstdc++.
+                    ut_dcheck(!uncaughtException() &&
+                            "May not throw from coroutine while another exception is propagating");
+#endif
 
-                // FIXME - failing on GCC/Clang
-                ut_dcheck(!std::uncaught_exception() &&
-                        "May not throw from coroutine while another exception is propagating");
+                    peptr = new Error(currentException());
+                }
 
                 // All remaining objects on stack have trivial destructors, coroutine is
                 // considered unwinded.
@@ -296,15 +297,15 @@ namespace detail
             static void* unpackYieldData(const YieldData& yReceived)
             {
                 if (yReceived.kind == YK_Exception) {
-                    auto peptr = static_cast<std::exception_ptr*>(yReceived.value); // safe cast
+                    auto peptr = static_cast<Error*>(yReceived.value); // safe cast
 
                     ut_assert(peptr != nullptr);
                     ut_assert(*peptr != nullptr);
 
-                    auto eptr = std::exception_ptr(*peptr);
+                    auto eptr = Error(*peptr);
                     delete peptr;
 
-                    std::rethrow_exception(eptr);
+                    rethrowException(eptr);
                     return nullptr;
                 } else {
                     ut_assert(yReceived.kind == YK_Result);
@@ -339,7 +340,7 @@ namespace detail
                 // Unwind.
                 try {
                     jump(*parent, *this, YieldData(YK_Exception,
-                        new std::exception_ptr(ForcedUnwind::ptr())));
+                        new Error(ForcedUnwind::ptr())));
                 } catch (...) {
                     ut_assert(false);
                 }
@@ -415,7 +416,7 @@ namespace detail
                 pushCoroutine(&sMainCoroutine);
 
                 // Initialize some eptrs in advance to avoid problems with
-                // std::current_exception() during exception propagation
+                // currentException() during exception propagation
                 ForcedUnwind::ptr();
             }
         }

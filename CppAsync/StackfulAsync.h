@@ -162,7 +162,7 @@ namespace stackful
         awaitNoThrow_(std::forward<Awaitable>(awt));
 
         if (detail::awaitable::hasError(awt))
-            std::rethrow_exception(detail::awaitable::takeError(awt));
+            rethrowException(detail::awaitable::takeError(awt));
     }
 
     template <class Awaitable,
@@ -172,7 +172,7 @@ namespace stackful
         awaitNoThrow_(std::forward<Awaitable>(awt));
 
         if (detail::awaitable::hasError(awt))
-            std::rethrow_exception(detail::awaitable::takeError(awt));
+            rethrowException(detail::awaitable::takeError(awt));
 
         return detail::awaitable::takeResult(awt);
     }

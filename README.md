@@ -91,14 +91,11 @@ _Table 2. Awaitable concept [(*)](#awt-traits). Given an awaitable object `awt`,
 <a id="awt-traits">(*)</a>  Types that don't conform precisely to this definition may be adapted through `ut::AwaitableTraits<T>`.
 
 While awaitables are trait based, `Awaiter`s must derive from a common interface:
+
 ```c++
-namespace ut {
-
 struct Awaiter {
-  virtual void resume(void *resumer) = 0;
+    virtual void resume(void *resumer) = 0;
 };
-
-}
 ```
 
 CppAsync provides a lightweight awaitable type called `ut::Task<R>` as default. Tasks automatically manage resources and cancellation policy for their underlying operation.

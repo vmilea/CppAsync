@@ -34,9 +34,9 @@ namespace detail
 
         namespace context
         {
-            inline std::exception_ptr& loopbackException() _ut_noexcept
+            inline Error& loopbackException() _ut_noexcept
             {
-                static std::exception_ptr sEptr;
+                static Error sEptr;
                 return sEptr;
             }
         }
@@ -92,7 +92,7 @@ namespace detail
 
             uint32_t resumePoint() const _ut_noexcept
             {
-                if (context::loopbackException() != nullptr && exceptionHandler() != 0)
+                if (!isNil(context::loopbackException()) && exceptionHandler() != 0)
                     return static_cast<uint32_t>(exceptionHandler()) << 24;
                 else
                     return lastLine();

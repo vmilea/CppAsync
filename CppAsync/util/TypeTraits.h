@@ -22,11 +22,13 @@
 
 namespace std {
 
+#ifndef UT_DISABLE_EXCEPTIONS
+
 // Workaround - MSVC 12.0 is missing throw() specifier for std::exception_ptr
 #if defined(_MSC_VER) && _MSC_VER < 1900
 
 template <>
-struct is_nothrow_copy_constructible<std::exception_ptr>
+struct is_nothrow_copy_constructible<exception_ptr>
     : true_type { };
 
 template <>
@@ -42,6 +44,8 @@ struct is_nothrow_move_assignable<exception_ptr>
     : true_type { };
 
 #endif
+
+#endif // UT_DISABLE_EXCEPTIONS
 
 }
 

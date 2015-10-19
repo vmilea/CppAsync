@@ -69,9 +69,9 @@ class StacklessCoroutine;
 
 #define ut_coro_begin_catch(handlerId) \
     case (uint32_t) handlerId << 24: \
-    if (ut::detail::stackless::context::loopbackException() != nullptr) { \
+    if (!ut::isNil(ut::detail::stackless::context::loopbackException())) { \
         try { \
-            std::rethrow_exception(ut::detail::stackless::context::loopbackException()); \
+            ut::rethrowException(ut::detail::stackless::context::loopbackException()); \
         } catch /* (const A& e) {
             ...
         } catch (const B& e) {
@@ -164,10 +164,10 @@ public:
         if (status.value == StacklessCoroutineStatus::SC_Done) {
             auto& loopbackException = detail::stackless::context::loopbackException();
 
-            if (loopbackException != nullptr) {
+            if (!isNil(loopbackException)) {
                 auto eptr = loopbackException;
-                loopbackException = nullptr;
-                std::rethrow_exception(eptr);
+                reset(loopbackException);
+                rethrowException(eptr);
             }
         }
 
@@ -191,24 +191,24 @@ public:
         bool loopback;
         do {
             ut_assert(coroState.lastValue == nullptr);
-            ut_assert(loopbackException == nullptr);
+            ut_assert(isNil(loopbackException));
 
             loopback = false;
             _ut_try {
                 detail::stackless::CoroutineFrameTraits<frame_type>::call(mFrame, arg);
 
-                ut_assert(loopbackException == nullptr);
+                ut_assert(isNil(loopbackException));
             } _ut_catch (...) {
                 ut_assert(!isDestructed);
                 ut_assert(coroState.lastLine() == 0);
                 ut_assert(coroState.lastValue == nullptr);
-                ut_assert(loopbackException == nullptr);
+                ut_assert(isNil(loopbackException));
 
-                loopbackException = std::current_exception();
+                loopbackException = currentException();
             }
 
-            if (!isDestructed && coroState.exceptionHandler() != 0
-                && loopbackException != nullptr) {
+            if (!isDestructed
+                && coroState.exceptionHandler() != 0 && !isNil(loopbackException)) {
 
                 auto eptr = loopbackException;
 
@@ -222,10 +222,10 @@ public:
 
                     if (coroState.lastLine() == 0) {
                         // Exception handled, function returned from catch block => finish
-                        loopbackException = nullptr;
+                        reset(loopbackException);
                     } else {
                         // Exception handled, function suspended by ut_coro_end_catch => resume
-                        loopbackException = nullptr;
+                        reset(loopbackException);
                         loopback = true;
                     }
                 } _ut_catch (...) {
@@ -236,13 +236,13 @@ public:
 
                     // Exception not handled or another expection was thrown from catch
                     // block => finish
-                    loopbackException = std::current_exception();
+                    loopbackException = currentException();
                 }
             }
         } while (loopback);
 
         if (isDestructed) {
-            ut_assert(loopbackException == nullptr);
+            ut_assert(isNil(loopbackException));
             return StacklessCoroutineStatus::SC_Destructed;
         } else {
             mDestructGuard = nullptr;
@@ -252,7 +252,7 @@ public:
                 coroState.setDone();
                 return StacklessCoroutineStatus::SC_Done;
             } else {
-                ut_assert(loopbackException == nullptr);
+                ut_assert(isNil(loopbackException));
                 return StacklessCoroutineStatus::SC_Suspended;
             }
         }

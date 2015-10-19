@@ -70,7 +70,6 @@ void ex_customAwaitable_s()
     context::looper().run();
 
     assert(task.isReady());
-
     try {
         task.get();
     } catch (const std::exception& e) {

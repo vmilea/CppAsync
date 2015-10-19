@@ -90,7 +90,7 @@ public:
         ut_dcheck(!hasError());
 #else
         if (hasError())
-            std::rethrow_exception(error());
+            rethrowException(error());
 #endif
 
         return result();
@@ -102,7 +102,7 @@ public:
         ut_dcheck(!hasError());
 #else
         if (hasError())
-            std::rethrow_exception(error());
+            rethrowException(error());
 #endif
 
         return result();
@@ -188,7 +188,7 @@ private:
             mResult.raw().emplaceBIntoA(std::forward<Args>(args)...);
             return true;
         } _ut_catch (...) {
-            mResult.raw().assignIntoBlank(std::current_exception());
+            mResult.raw().assignIntoBlank(currentException());
             return false;
         }
     }
@@ -235,7 +235,7 @@ public:
         ut_dcheck(!hasError());
 #else
         if (hasError())
-            std::rethrow_exception(error());
+            rethrowException(error());
 #endif
     }
 

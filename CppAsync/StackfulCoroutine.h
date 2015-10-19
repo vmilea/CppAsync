@@ -36,9 +36,9 @@ namespace ut {
         class ForcedUnwind
         {
         public:
-            static std::exception_ptr ptr() _ut_noexcept
+            static Error ptr() _ut_noexcept
             {
-                static auto sEptr = std::make_exception_ptr(ForcedUnwind());
+                static auto sEptr = makeExceptionPtr(ForcedUnwind());
                 return sEptr;
             }
         };

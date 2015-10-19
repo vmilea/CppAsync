@@ -104,12 +104,12 @@ namespace detail
 #ifdef UT_DISABLE_EXCEPTIONS
                 coro.resume();
 #else
-                std::exception_ptr eptr;
+                Error eptr;
                 try {
                     coro.resume();
                     return;
                 } catch (...) {
-                    eptr = std::current_exception();
+                    eptr = currentException();
                 }
                 interruptCoroutine(std::move(eptr));
 #endif

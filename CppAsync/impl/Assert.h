@@ -20,7 +20,7 @@
 #include <cassert>
 #include <cstdarg>
 #include <cstdio>
-#include <stdexcept>
+#include <cstdlib>
 
 //
 // Checking internal consistency (only in DEBUG builds)
@@ -37,7 +37,7 @@
     _ut_multi_line_macro_begin \
     if (!(condition)) { \
         fputs("[CPP-ASYNC] ASSERT FAILED: " #condition "\n", stderr); \
-        std::terminate(); \
+        std::abort(); \
     } \
     _ut_multi_line_macro_end
 
@@ -46,7 +46,7 @@
     if (!(condition)) { \
         fprintf(stderr, "[CPP-ASYNC] ASSERT FAILED: " #condition  " --- " format "\n", \
             ##__VA_ARGS__); \
-        std::terminate(); \
+        std::abort(); \
     } \
     _ut_multi_line_macro_end
 
@@ -79,7 +79,7 @@
     _ut_multi_line_macro_begin \
     if (!(condition)) { \
         fputs("[CPP-ASYNC] CHECK FAILED: " #condition "\n", stderr); \
-        std::terminate(); \
+        std::abort(); \
     } \
     _ut_multi_line_macro_end
 
@@ -88,7 +88,7 @@
     if (!(condition)) { \
         fprintf(stderr, "[CPP-ASYNC] CHECK FAILED: " #condition  " --- " format "\n", \
             ##__VA_ARGS__); \
-        std::terminate(); \
+        std::abort(); \
     } \
     _ut_multi_line_macro_end
 

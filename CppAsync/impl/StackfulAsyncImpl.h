@@ -200,11 +200,11 @@ namespace detail
                 ut_assert(mPromise->state() == PromiseBase::ST_OpRunning
                     || mPromise->state() == PromiseBase::ST_OpRunningDetached);
 
-                std::exception_ptr eptr;
+                Error eptr;
                 try {
                     (*mCoroutine)(resumer);
                 } catch (...) {
-                    eptr = std::current_exception();
+                    eptr = currentException();
                 }
 
                 auto state = mPromise->state();
@@ -260,7 +260,7 @@ namespace detail
                             break;
                         case PromiseBase::ST_OpRunningDetached:
                             try {
-                                std::rethrow_exception(eptr);
+                                rethrowException(eptr);
                             } catch (const std::exception& e) {
                                 fprintf(stderr, "[CPP-ASYNC] UNCAUGHT EXCEPTION: %s\n", e.what());
                             } catch (...) {
@@ -394,7 +394,7 @@ namespace detail
             AwaitableBase *doneAwt = rAwaitAnyNoThrow_(range);
 
             if (doneAwt->hasError())
-                std::rethrow_exception(doneAwt->error());
+                rethrowException(doneAwt->error());
 
             return doneAwt;
         }
@@ -451,7 +451,7 @@ namespace detail
             AwaitableBase *failedAwt = rAwaitAllNoThrow_(range);
 
             if (failedAwt != nullptr)
-                std::rethrow_exception(failedAwt->error());
+                rethrowException(failedAwt->error());
         }
     }
 }

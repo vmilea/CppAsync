@@ -35,7 +35,7 @@
 
 #define _ut_check_for_error(awt) \
     if (ut::detail::awaitable::hasError(awt)) \
-        std::rethrow_exception(ut::detail::awaitable::takeError(awt));
+        ut::rethrowException(ut::detail::awaitable::takeError(awt));
 
 #endif // UT_DISABLE_EXCEPTIONS
 
@@ -168,7 +168,7 @@ namespace detail
                     coroutine.frame().ut_asyncState.arg = nullptr;
                     state = promise.state();
 
-                    if (context::loopbackException() == nullptr) {
+                    if (isNil(context::loopbackException())) {
                         switch (state)
                         {
                         case PromiseBase::ST_Moved:
@@ -198,7 +198,7 @@ namespace detail
                         ut_assert(false);
 #else
                         auto eptr = context::loopbackException();
-                        context::loopbackException() = nullptr;
+                        reset(context::loopbackException());
 
                         switch (state)
                         {
@@ -217,7 +217,7 @@ namespace detail
                             break;
                         case PromiseBase::ST_OpRunningDetached:
                             try {
-                                std::rethrow_exception(eptr);
+                                rethrowException(eptr);
                             } catch (const std::exception& e) {
                                 fprintf(stderr, "[CPP-ASYNC] UNCAUGHT EXCEPTION: %s\n", e.what());
                             } catch (...) {

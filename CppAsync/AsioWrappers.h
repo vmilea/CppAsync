@@ -56,7 +56,7 @@ namespace detail
 
                 if (subtask.hasError()) {
                     try {
-                        std::rethrow_exception(subtask.error());
+                        rethrowException(subtask.error());
                     } catch (const boost::system::system_error& e) {
                         ec = e.code();
                         // try next
@@ -160,7 +160,7 @@ struct AsioHandlerMixin
         if (promise.isCompletable())
         {
             if (ec)
-                promise.fail(std::make_exception_ptr(boost::system::system_error(ec)));
+                promise.fail(makeExceptionPtr(boost::system::system_error(ec)));
             else
                 promise(std::forward<U>(arg));
         }
@@ -178,7 +178,7 @@ struct AsioHandlerMixin<void>
         if (promise.isCompletable())
         {
             if (ec)
-                promise.fail(std::make_exception_ptr(boost::system::system_error(ec)));
+                promise.fail(makeExceptionPtr(boost::system::system_error(ec)));
             else
                 promise();
         }

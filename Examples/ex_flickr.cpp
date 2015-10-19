@@ -61,8 +61,6 @@ static ut::Task<void> asyncFlickrDownload(const std::vector<std::string>& tags,
             ut::AwaitableBase *doneTask = nullptr;
             ut_begin();
 
-            connectTask = ut::makeFailedTask<tcp::endpoint>(std::runtime_error("pzd"));
-
             // Prepare a persistent SSL connection for API queries.
             connectTask = util::asyncHttpsClientConnect(ctx->apiSocket, ctx, FLICKR_API_HOST);
             ut_await_(connectTask);

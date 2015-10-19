@@ -138,6 +138,41 @@ namespace ut
 namespace ut
 {
     using Error = std::exception_ptr;
+
+    template <class E>
+    Error makeExceptionPtr(E&& e) _ut_noexcept
+    {
+        return std::make_exception_ptr(std::forward<E>(e));
+    }
+
+    inline void rethrowException(Error eptr)
+    {
+        std::rethrow_exception(eptr);
+    }
+
+    inline bool uncaughtException() _ut_noexcept
+    {
+        // WARNING: With GCC versions from 4.8.2 to 4.9.3 and from 5.0 to 5.2,
+        //          uncaught_exception() returns true after rethrow_exception().
+        //          See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=62258.
+        //
+        return std::uncaught_exception();
+    }
+
+    inline Error currentException() _ut_noexcept
+    {
+        return std::current_exception();
+    }
+
+    inline void reset(Error& eptr) _ut_noexcept
+    {
+        eptr = nullptr;
+    }
+
+    inline bool isNil(Error& eptr) _ut_noexcept
+    {
+        return eptr == nullptr;
+    }
 }
 
 #endif // UT_DISABLE_EXCEPTIONS

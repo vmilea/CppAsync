@@ -504,7 +504,7 @@ public:
     template <class E>
     void fail(E exception)
     {
-        fail(std::make_exception_ptr(std::move(exception)));
+        fail(makeExceptionPtr(std::move(exception)));
     }
 #endif
 
@@ -657,7 +657,7 @@ public:
     template <class E>
     void fail(E exception) const
     {
-        fail(std::make_exception_ptr(std::move(exception)));
+        fail(makeExceptionPtr(std::move(exception)));
     }
 #endif
 
@@ -768,7 +768,7 @@ Task<R> makeCompletedTask(Args&&... args)
 #ifndef UT_DISABLE_EXCEPTIONS
     // Throw if move/copy constructor failed.
     if (task.hasError())
-        std::rethrow_exception(task.error());
+        rethrowException(task.error());
 #endif
 
     return task;
@@ -792,7 +792,7 @@ Task<R> makeFailedTask(Error::value_type error)
 template <class R = void, class E>
 Task<R> makeFailedTask(E exception)
 {
-    return makeFailedTask<R>(std::make_exception_ptr(std::move(exception)));
+    return makeFailedTask<R>(makeExceptionPtr(std::move(exception)));
 }
 #endif
 
