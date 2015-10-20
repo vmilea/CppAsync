@@ -188,10 +188,9 @@ public:
 
     void detach() _ut_noexcept
     {
-        ut_dcheck(this->isValid());
+        ut_dcheck(this->isValid() && hasPromise());
 
-        if (hasPromise())
-            promise()->mState = Promise<R>::ST_OpRunningDetached;
+        promise()->mState = Promise<R>::ST_OpRunningDetached;
 
         CommonAwaitable<R>::reset(AwaitableBase::ST_Initial);
 
@@ -200,6 +199,17 @@ public:
             mListener.reset();
             listener->onDetach();
         }
+    }
+
+    void cancel() _ut_noexcept
+    {
+        ut_assert(this->isValid() && hasPromise());
+
+        promise()->mState = Promise<R>::ST_OpCanceled;
+
+        CommonAwaitable<R>::reset(CommonAwaitable<R>::ST_Canceled);
+
+        mListener.reset();
     }
 
 private:
@@ -298,18 +308,6 @@ private:
     void setPromise(Promise<R> *promise) _ut_noexcept
     {
         this->mStateAsPtr = promise;
-    }
-
-    void cancel() _ut_noexcept
-    {
-        ut_assert(this->isValid() && hasPromise());
-
-        if (hasPromise())
-            promise()->mState = Promise<R>::ST_OpCanceled;
-
-        CommonAwaitable<R>::reset(CommonAwaitable<R>::ST_Canceled);
-
-        mListener.reset();
     }
 
     template <class ...Args>
@@ -449,10 +447,10 @@ public:
     {
         ut_assert(this != &other);
 
+        // A running Task gets automatically canceled if its Promise is destroyed.
         if (isCompletable()) {
             ut_assert(mTask != other.mTask);
-            task()->cancel();
-            ut_assert(mState == ST_OpCanceled);
+            cancel();
         }
 
         other.moveInto(*this);
@@ -462,10 +460,9 @@ public:
 
     ~Promise() _ut_noexcept
     {
-        if (isCompletable()) {
-            task()->cancel();
-            ut_assert(mState == ST_OpCanceled);
-        }
+        // A running Task gets automatically canceled if its Promise is destroyed.
+        if (isCompletable())
+            cancel();
     }
 
     void swap(Promise<R>& other) _ut_noexcept
@@ -486,6 +483,14 @@ public:
     SharedPromise<R> share()
     {
         return SharedPromise<R>(std::move(*this));
+    }
+
+    void cancel() _ut_noexcept
+    {
+        ut_dcheck(isCompletable());
+
+        task()->cancel();
+        ut_assert(mState == ST_OpCanceled);
     }
 
     void fail(Error error) _ut_noexcept
@@ -637,6 +642,15 @@ public:
     bool isCompletable() const _ut_noexcept
     {
         return mSharedPromise != nullptr && mSharedPromise->isCompletable();
+    }
+
+    void cancel() const _ut_noexcept
+    {
+        checkNotMoved();
+        auto& promise = *mSharedPromise;
+
+        if (promise.isCompletable())
+            promise.cancel();
     }
 
     void fail(Error error) const _ut_noexcept

@@ -168,8 +168,8 @@ inline Error awaitable_takeError(AwaitableBase& awt) _ut_noexcept
 //
 
 // Getting an error here means you are trying to use awaitAll/Any/Some on a collection of
-// unknown types. You can teach the library how to probe new types and access the underlying
-// awaitable by overloading selectAwaitable().
+// unknown types. You can teach the library how to probe additional types and access the
+// underlying awaitable by overloading selectAwaitable().
 
 inline AwaitableBase& selectAwaitable(AwaitableBase& awt) _ut_noexcept
 {

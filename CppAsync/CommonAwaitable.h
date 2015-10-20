@@ -108,12 +108,6 @@ public:
         return result();
     }
 
-private:
-    bool hasResult() const _ut_noexcept
-    {
-        return mState == ST_Completed;
-    }
-
 protected:
     // Awaitable has been moved into another object.
     static const uintptr_t ST_Moved = ST_Invalid0;
@@ -168,6 +162,11 @@ protected:
     }
 
 private:
+    bool hasResult() const _ut_noexcept
+    {
+        return mState == ST_Completed;
+    }
+
     template <class ...Args>
     bool initializeResultImpl(NoThrowTag, Args&&... args) _ut_noexcept
     {
@@ -247,6 +246,7 @@ protected:
     static const uintptr_t ST_Canceled = ST_Invalid1;
 
     CommonAwaitable() _ut_noexcept
+        : mError(Error())
     {
         ut_assert(static_cast<void*>(&castError()) // safe
             == static_cast<void*>(&mError)); // safe
