@@ -166,6 +166,57 @@ ut::Task<tcp::endpoint> asyncResolveAndConnect(
 }
 ```
 
+Below is the same task implemented over a stackless coroutine. Variables that need to be persisted across suspension points are stored as fields in an `AsyncFrame`. The frame gets allocated on the heap (custom allocators are also supported), and deallocated once the task completes or is canceled.
+
+```c++
+static ut::Task<tcp::endpoint> asyncResolveAndConnect(
+    tcp::socket& socket, tcp::resolver::query query)
+{
+    struct Frame : ut::AsyncFrame<tcp::endpoint>
+    {
+        Frame(tcp::socket& socket, tcp::resolver::query query)
+            : socket(socket)
+            , query(query)
+            , resolver(socket.get_io_service()) { }
+
+        void operator()()
+        {
+            // Body must be wrapped betweeen ut_begin() .. ut_end() macros.
+            ut_begin();
+
+            resolveTask = asyncResolve(resolver, query);
+
+            // Suspends coroutine until task has finished.
+            ut_await_(resolveTask);
+
+            for (it = resolveTask.get(); it != tcp::resolver::iterator(); ++it) {
+                connectTask = asyncConnect(socket, *it);
+
+                // Suspends coroutine until task has finished. This version of
+                // await doesn't throw when task fails.
+                ut_await_no_throw_(connectTask);
+
+                if (!connectTask.hasError())
+                    ut_return(*it);
+            }
+
+            throw SocketError("Failed to connect socket");
+            ut_end();
+        }
+
+    private:
+        tcp::socket& socket;
+        tcp::resolver::query query;
+        tcp::resolver resolver;
+        tcp::resolver::iterator it;
+        ut::Task<tcp::resolver::iterator> resolveTask;
+        ut::Task<void> connectTask;
+    };
+
+    return ut::startAsync<Frame>(socket, query);
+}
+```
+
 ## Adding CppAsync to your project
 
 Just add CppAsync to the include path of your project. There are no mandatory [(*)](#linking-boost-context) dependencies.
