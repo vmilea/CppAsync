@@ -38,8 +38,12 @@ struct AsyncFrame;
     ut_coro_begin()
 
 #define ut_return(result) \
+    _ut_multi_line_macro_begin \
+    \
     this->ut_asyncState.promise->complete(result); \
-    return;
+    return; \
+    \
+    _ut_multi_line_macro_end
 
 #define ut_end() \
     ut_coro_end()

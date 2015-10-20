@@ -127,6 +127,16 @@ namespace ut
     {
         return !(a == b);
     }
+
+    inline bool isNil(const Error& eptr) _ut_noexcept
+    {
+        return error == Error();
+    }
+
+    inline void reset(Error& error) _ut_noexcept
+    {
+        error = Error();
+    }
 }
 
 #else
@@ -164,14 +174,14 @@ namespace ut
         return std::current_exception();
     }
 
+    inline bool isNil(const Error& eptr) _ut_noexcept
+    {
+        return eptr == nullptr;
+    }
+
     inline void reset(Error& eptr) _ut_noexcept
     {
         eptr = nullptr;
-    }
-
-    inline bool isNil(Error& eptr) _ut_noexcept
-    {
-        return eptr == nullptr;
     }
 }
 

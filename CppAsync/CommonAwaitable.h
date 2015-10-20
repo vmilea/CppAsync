@@ -155,8 +155,8 @@ protected:
     void initializeError(Error&& error) _ut_noexcept
     {
         ut_assert(!isReady());
-        ut_assert(mResult.a() == Error());
-        ut_assert(error != Error());
+        ut_assert(isNil(mResult.a()));
+        ut_assert(!isNil(error));
 
         mResult.a() = std::move(error);
     }
@@ -171,7 +171,7 @@ private:
     bool initializeResultImpl(NoThrowTag, Args&&... args) _ut_noexcept
     {
         ut_assert(!isReady());
-        ut_assert(mResult.a() == Error());
+        ut_assert(isNil(mResult.a()));
 
         mResult.raw().emplaceBIntoA(std::forward<Args>(args)...);
         return true;
@@ -181,7 +181,7 @@ private:
     bool initializeResultImpl(ThrowTag, Args&&... args) _ut_noexcept
     {
         ut_assert(!isReady());
-        ut_assert(mResult.a() == Error());
+        ut_assert(isNil(mResult.a()));
 
         _ut_try {
             mResult.raw().emplaceBIntoA(std::forward<Args>(args)...);
@@ -217,6 +217,8 @@ public:
     CommonAwaitable& operator=(CommonAwaitable&& other) _ut_noexcept
     {
         ut_assert(this != &other);
+
+        mError = std::move(other.mError);
 
         mAwaiter = movePtr(other.mAwaiter);
 
@@ -267,7 +269,7 @@ protected:
     bool initializeResult() _ut_noexcept
     {
         ut_assert(!isReady());
-        ut_assert(mError == Error());
+        ut_assert(isNil(mError));
 
         // Does nothing, always sucessful.
         return true;
@@ -276,8 +278,8 @@ protected:
     void initializeError(Error&& error) _ut_noexcept
     {
         ut_assert(!isReady());
-        ut_assert(mError == Error());
-        ut_assert(error != Error());
+        ut_assert(isNil(mError));
+        ut_assert(!isNil(error));
 
         mError = std::move(error);
     }

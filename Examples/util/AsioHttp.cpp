@@ -211,7 +211,7 @@ namespace detail
             handshakeTask = asyncHandshake(socket, ctx, socket_type::client);
             ut_await_(handshakeTask);
 
-            ut_return(connectTask.get())
+            ut_return(connectTask.get());
             ut_end();
         }
 
