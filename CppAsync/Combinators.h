@@ -50,7 +50,13 @@ namespace detail
                 for (auto& item : makeRange(awts)) {
                     auto& awt = selectAwaitable(item);
 
-                    ut_assert(!awt.isReady() && awt.awaiter() == this);
+                    ut_dcheck(awt.isValid() &&
+                        "Awaitables may not be altered while being awaited. Make sure they are "
+                        "not being invalidated before whenAny() Task.");
+                    ut_dcheck((!awt.isReady() && awt.awaiter() == this) &&
+                        "Awaitables may not be altered while being awaited. Make sure to destruct "
+                        "or cancel the whenAny() Task in advance.");
+
                     awt.setAwaiter(nullptr);
                 }
             }
@@ -149,8 +155,15 @@ namespace detail
                 for (auto& item : makeRange(awts)) {
                     auto& awt = selectAwaitable(item);
 
+                    ut_dcheck(awt.isValid() &&
+                        "Awaitables may not be altered while being awaited. Make sure they are "
+                        "not being invalidated before whenSome/whenAll() Task.");
+
                     if (!awt.isReady()) {
-                        ut_assert(awt.awaiter() == this);
+                        ut_dcheck(awt.awaiter() == this &&
+                            "Awaitables may not be altered while being awaited. Make sure to "
+                            "destruct or cancel the whenSome/whenAll() Task in advance.");
+
                         awt.setAwaiter(nullptr);
                     }
                 }

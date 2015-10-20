@@ -46,7 +46,7 @@ using namespace util::flickr;
 static ut::Task<void> asyncFlickrDownload(const std::vector<std::string>& tags,
     int numPics, int numPicsPerPage)
 {
-    static const int MAX_PARALLEL_DOWNLOADS = 5;
+    static const int MAX_PARALLEL_DOWNLOADS = 4;
 
     struct Frame : ut::AsyncFrame<void>
     {
@@ -111,6 +111,9 @@ static ut::Task<void> asyncFlickrDownload(const std::vector<std::string>& tags,
                 numActiveTransfers--;
 
                 if (doneTask == &ctx->querySlot.task) { // query done
+                    // Cancel whenAny combinator. Resets awaiter to nullptr for all download tasks.
+                    anyDownloadTask.cancel();
+
                     FlickrPhotos resp = parseFlickrResponse(ctx->querySlot.buf);
 
                     printf("<- query result: %ld photos, page %d/%d, %d per page, %d total\n",

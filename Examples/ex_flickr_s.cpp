@@ -46,7 +46,7 @@ using namespace util::flickr;
 static ut::Task<void> asyncFlickrDownload(const std::vector<std::string>& tags,
     int numPics, int numPicsPerPage)
 {
-    static const int MAX_PARALLEL_DOWNLOADS = 5;
+    static const int MAX_PARALLEL_DOWNLOADS = 4;
 
     struct TransferSlot
     {
