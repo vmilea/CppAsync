@@ -155,8 +155,9 @@ ut::Task<tcp::endpoint> asyncResolveAndConnect(
             try {
                 // Suspends coroutine until task has finished.
                 await_(connectTask);
+
                 return ep;
-            } catch (const std::exception&) {
+            } catch (...) {
                 // Try next endpoint.
             }
         }
@@ -169,7 +170,7 @@ ut::Task<tcp::endpoint> asyncResolveAndConnect(
 Below is the same task implemented over a stackless coroutine. Variables that need to be persisted across suspension points are stored as fields in an `AsyncFrame`. The frame gets allocated on the heap (custom allocators are also supported), and deallocated once the task completes or is canceled.
 
 ```c++
-static ut::Task<tcp::endpoint> asyncResolveAndConnect(
+ut::Task<tcp::endpoint> asyncResolveAndConnect(
     tcp::socket& socket, tcp::resolver::query query)
 {
     struct Frame : ut::AsyncFrame<tcp::endpoint>
@@ -192,12 +193,14 @@ static ut::Task<tcp::endpoint> asyncResolveAndConnect(
             for (it = resolveTask.get(); it != tcp::resolver::iterator(); ++it) {
                 connectTask = asyncConnect(socket, *it);
 
-                // Suspends coroutine until task has finished. This version of
-                // await doesn't throw when task fails.
-                ut_await_no_throw_(connectTask);
+                ut_try {
+                    // Suspends coroutine until task has finished.
+                    ut_await_(connectTask);
 
-                if (!connectTask.hasError())
                     ut_return(*it);
+                } ut_catch (...) {
+                    // Try next endpoint.
+                }
             }
 
             throw SocketError("Failed to connect socket");

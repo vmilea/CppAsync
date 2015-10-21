@@ -44,7 +44,7 @@ class StacklessCoroutine;
     return; \
     default: \
         ut_dcheck(false && \
-            "Invalid resume point. Check your exception handlers."); \
+            "Invalid resume point. Please check for mismatched ut_coro_catch."); \
         return; \
     }
 
@@ -67,24 +67,42 @@ class StacklessCoroutine;
 #define ut_coro_clear_exception_handler() \
     this->ut_coroState.clearExceptionHandler()
 
-#define ut_coro_begin_catch(handlerId) \
+#define ut_coro_handler(handlerId) \
     case (uint32_t) handlerId << 24: \
-    if (!ut::isNil(ut::detail::stackless::context::loopbackException())) { \
+    this->ut_coroState.clearExceptionHandler(); \
+    if (!ut::isNil(ut::detail::stackless::context::loopbackException())) \
         try { \
-            ut::rethrowException(ut::detail::stackless::context::loopbackException()); \
+            auto eptr = std::move(ut::detail::stackless::context::loopbackException()); \
+            ut::reset(ut::detail::stackless::context::loopbackException()); \
+            ut::rethrowException(eptr); \
         } catch /* (const A& e) {
             ...
         } catch (const B& e) {
             ...
         } */
 
-#define ut_coro_end_catch() \
-        this->ut_coroState.setLastLine( \
-            ut::detail::stackless::CORO_END_CATCH_LINE_OFFSET + __LINE__); \
-        return; \
-        case ut::detail::stackless::CORO_END_CATCH_LINE_OFFSET + __LINE__: ; \
-    } \
+#define ut_coro_try \
+    ut_coro_set_exception_handler(1);
 
+#define ut_coro_catch \
+    ut_coro_handler(1)
+
+#define ut_coro_try2 \
+    ut_coro_set_exception_handler(2);
+
+#define ut_coro_catch2 \
+    ut_coro_handler(2)
+
+#define ut_coro_try3 \
+    ut_coro_set_exception_handler(3);
+
+#define ut_coro_catch3 \
+    ut_coro_handler(3)
+
+// Call before break/continue from ut_coro_try block, otherwise the exception
+// handler may remain active outside of its intended scope.
+#define ut_coro_abort_try() \
+    ut_coro_clear_exception_handler()
 
 namespace ut {
 
@@ -188,13 +206,15 @@ public:
         ut_assert(mDestructGuard == nullptr);
         mDestructGuard = &isDestructed;
 
-        bool loopback;
+        bool loopback = false;
         do {
             ut_assert(coroState.lastValue == nullptr);
-            ut_assert(isNil(loopbackException));
+            ut_assert(isNil(loopbackException)
+                || (loopback && (coroState.exceptionHandler() != 0)));
 
             loopback = false;
             _ut_try {
+                // Resume from last line or from exception handler.
                 detail::stackless::CoroutineFrameTraits<frame_type>::call(mFrame, arg);
 
                 ut_assert(isNil(loopbackException));
@@ -205,39 +225,11 @@ public:
                 ut_assert(isNil(loopbackException));
 
                 loopbackException = currentException();
-            }
+                ut_assert(!isNil(loopbackException));
 
-            if (!isDestructed
-                && coroState.exceptionHandler() != 0 && !isNil(loopbackException)) {
-
-                auto eptr = loopbackException;
-
-                _ut_try {
-                    // Jump into exception handler.
-                    detail::stackless::CoroutineFrameTraits<frame_type>::call(mFrame, nullptr);
-
-                    ut_assert(!isDestructed);
-                    ut_assert(coroState.lastValue == nullptr);
-                    ut_assert(loopbackException == eptr);
-
-                    if (coroState.lastLine() == 0) {
-                        // Exception handled, function returned from catch block => finish
-                        reset(loopbackException);
-                    } else {
-                        // Exception handled, function suspended by ut_coro_end_catch => resume
-                        reset(loopbackException);
-                        loopback = true;
-                    }
-                } _ut_catch (...) {
-                    ut_assert(!isDestructed);
-                    ut_assert(coroState.lastLine() == 0);
-                    ut_assert(coroState.lastValue == nullptr);
-                    ut_assert(loopbackException == eptr);
-
-                    // Exception not handled or another expection was thrown from catch
-                    // block => finish
-                    loopbackException = currentException();
-                }
+                // Resume coroutine to give it a chance at handling the exception
+                if (coroState.exceptionHandler() != 0)
+                    loopback = true;
             }
         } while (loopback);
 

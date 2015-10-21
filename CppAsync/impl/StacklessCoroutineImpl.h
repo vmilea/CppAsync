@@ -30,7 +30,6 @@ namespace detail
     namespace stackless
     {
         static const uint32_t CORO_LINE_MASK = 0x00FFFFFF;
-        static const uint32_t CORO_END_CATCH_LINE_OFFSET = 10000000;
 
         namespace context
         {
@@ -74,11 +73,13 @@ namespace detail
 
             uint8_t exceptionHandler() const _ut_noexcept
             {
-                return static_cast<uint8_t>((lastState & ~CORO_LINE_MASK) >> 24); // safe cast
+                return (uint8_t) (lastState >> 24);
             }
 
             void setExceptionHandler(uint8_t id) _ut_noexcept
             {
+                ut_dcheck(exceptionHandler() == 0 &&
+                    "Multiple level try-catch blocks not supported");
                 ut_dcheck(id > 0 &&
                     "Supported handler ID range is 1..255");
 
@@ -87,13 +88,15 @@ namespace detail
 
             void clearExceptionHandler() _ut_noexcept
             {
+                ut_assert(exceptionHandler() != 0);
+
                 lastState &= CORO_LINE_MASK;
             }
 
             uint32_t resumePoint() const _ut_noexcept
             {
-                if (!isNil(context::loopbackException()) && exceptionHandler() != 0)
-                    return static_cast<uint32_t>(exceptionHandler()) << 24;
+                if (exceptionHandler() != 0 && !isNil(context::loopbackException()))
+                    return (uint32_t) exceptionHandler() << 24;
                 else
                     return lastLine();
             }

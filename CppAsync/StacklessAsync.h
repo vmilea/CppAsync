@@ -37,6 +37,9 @@ struct AsyncFrame;
     (void) _utAwt; \
     ut_coro_begin()
 
+#define ut_end() \
+    ut_coro_end()
+
 #define ut_return(result) \
     _ut_multi_line_macro_begin \
     \
@@ -45,20 +48,28 @@ struct AsyncFrame;
     \
     _ut_multi_line_macro_end
 
-#define ut_end() \
-    ut_coro_end()
+#define ut_try \
+    ut_coro_try
 
-#define ut_set_exception_handler(handlerId) \
-    ut_coro_set_exception_handler(handlerId)
+#define ut_catch \
+    ut_coro_catch
 
-#define ut_clear_exception_handler() \
-    ut_coro_clear_exception_handler()
+#define ut_try2 \
+    ut_coro_try2
 
-#define ut_begin_catch(handlerId) \
-    ut_coro_begin_catch(handlerId)
+#define ut_catch2 \
+    ut_coro_catch2
 
-#define ut_end_catch() \
-    ut_coro_end_catch()
+#define ut_try3 \
+    ut_coro_try3
+
+#define ut_catch3 \
+    ut_coro_catch3
+
+// Call before break/continue from ut_try block, otherwise the exception
+// handler may remain active outside of its intended scope.
+#define ut_abort_try() \
+    ut_coro_abort_try()
 
 #define ut_await_no_throw_(awt) \
     _ut_multi_line_macro_begin \
