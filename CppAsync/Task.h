@@ -646,20 +646,22 @@ public:
 
     void cancel() const _ut_noexcept
     {
-        checkNotMoved();
-        auto& promise = *mSharedPromise;
+        if (mSharedPromise != nullptr) {
+            auto& promise = *mSharedPromise;
 
-        if (promise.isCompletable())
-            promise.cancel();
+            if (promise.isCompletable())
+                promise.cancel();
+        }
     }
 
     void fail(Error error) const _ut_noexcept
     {
-        checkNotMoved();
-        auto& promise = *mSharedPromise;
+        if (mSharedPromise != nullptr) {
+            auto& promise = *mSharedPromise;
 
-        if (promise.isCompletable())
-            promise.fail(std::move(error));
+            if (promise.isCompletable())
+                promise.fail(std::move(error));
+        }
     }
 
 #ifdef UT_DISABLE_EXCEPTIONS
@@ -677,21 +679,15 @@ public:
 
     Promise<R>& promise() const
     {
+        ut_dcheck(mSharedPromise &&
+            "SharedPromise has been moved");
+
         return *mSharedPromise;
     }
 
 private:
     explicit SharedPromise(Promise<R>&& promise)
         : mSharedPromise(std::make_shared<Promise<R>>(std::move(promise))) { }
-
-    void checkNotMoved() const _ut_noexcept
-    {
-        ut_dcheck(mSharedPromise &&
-            "SharedPromise has been moved");
-
-        ut_dcheck(mSharedPromise->state() != PromiseBase::ST_Moved &&
-            "Promise has been moved");
-    }
 
     std::shared_ptr<Promise<R>> mSharedPromise;
 
@@ -708,11 +704,12 @@ public:
     {
         auto& thiz = static_cast<const SharedPromise<R>&>(*this); // safe cast
 
-        thiz.checkNotMoved();
-        auto& promise = thiz.promise();
+        if (thiz.mSharedPromise != nullptr) {
+            auto& promise = *thiz.mSharedPromise;
 
-        if (promise.isCompletable())
-            promise.complete(std::forward<Args>(args)...);
+            if (promise.isCompletable())
+                promise.complete(std::forward<Args>(args)...);
+        }
     }
 
     template <class ...Args>
@@ -730,11 +727,12 @@ public:
     {
         auto& thiz = static_cast<const SharedPromise<void>&>(*this); // safe cast
 
-        thiz.checkNotMoved();
-        auto& promise = *thiz.mSharedPromise;
+        if (thiz.mSharedPromise != nullptr) {
+            auto& promise = *thiz.mSharedPromise;
 
-        if (promise.isCompletable())
-            promise.complete();
+            if (promise.isCompletable())
+                promise.complete();
+        }
     }
 
     void operator()() const _ut_noexcept
