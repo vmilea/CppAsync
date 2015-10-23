@@ -22,53 +22,166 @@
 
 namespace ut {
 
-namespace detail
-{
-    template <class T>
-    struct ContextNode;
-
-    template <>
-    struct ContextNode<void>
-    {
-        std::shared_ptr<void> parent;
-
-        ContextNode(const std::shared_ptr<void>& parent) _ut_noexcept
-            : parent(parent) { }
-    };
-
-    template <class T>
-    struct ContextNode : ContextNode<void>
-    {
-        T value;
-
-        template <class ...Args>
-        ContextNode(const std::shared_ptr<void>& parent, Args&&... args)
-            : base_type(parent)
-            , value(std::forward<Args>(args)...) { }
-
-    private:
-        using base_type = ContextNode<void>;
-    };
-}
-
-template <class T, class Alloc>
-struct ContextRefMixin;
-
 template <class T, class Alloc = std::allocator<char>>
-class ContextRef : public ContextRefMixin<T, Alloc>
+class ContextRef
 {
 public:
     using value_type = T;
     using alloc_type = Alloc;
 
+    ContextRef() _ut_noexcept { }
+
+    explicit ContextRef(const Alloc& alloc) _ut_noexcept
+        : mAlloc(alloc) { }
+
     template <class ...Args>
-    ContextRef(const std::shared_ptr<void>& parent, const Alloc& alloc, Args&&... args)
-        : mNode(std::allocate_shared<detail::ContextNode<T>>(alloc,
-            parent, std::forward<Args>(args)...))
+    ContextRef(std::shared_ptr<void> parent, const Alloc& alloc, Args&&... args)
+        : mNode(std::allocate_shared<Node>(alloc, std::move(parent), std::forward<Args>(args)...))
         , mAlloc(alloc) { }
 
-    template <class U,
-        class Z = T, EnableIfVoid<Z> = nullptr>
+    ContextRef(const ContextRef& other) _ut_noexcept
+        : mNode(other.mNode)
+        , mAlloc(other.mAlloc) { }
+
+    ContextRef(ContextRef&& other) _ut_noexcept
+        : mNode(std::move(other.mNode))
+        , mAlloc(std::move(other.mAlloc)) { }
+
+    ContextRef& operator=(const ContextRef& other) _ut_noexcept
+    {
+        mNode = other.mNode;
+        mAlloc = other.mAlloc;
+
+        return *this;
+    }
+
+    ContextRef& operator=(ContextRef&& other) _ut_noexcept
+    {
+        ut_assert(this != &other);
+
+        mNode = std::move(other.mNode);
+        mAlloc = std::move(other.mAlloc);
+
+        return *this;
+    }
+
+    void swap(ContextRef& other) _ut_noexcept
+    {
+        using std::swap;
+
+        swap(mNode, other.mNode);
+        swap(mAlloc, other.mAlloc);
+    }
+
+    template <class U, class ...Args>
+    ContextRef<U, Alloc> spawn(Args&&... args) const
+    {
+        return ContextRef<U, Alloc>(mNode, mAlloc, std::forward<Args>(args)...);
+    }
+
+    template <class U, class UAlloc, class ...Args>
+    ContextRef<U, UAlloc> spawnWithAllocator(const UAlloc& alloc, Args&&... args) const
+    {
+        return ContextRef<U, UAlloc>(mNode, alloc, std::forward<Args>(args)...);
+    }
+
+    std::shared_ptr<void> ptr() const _ut_noexcept
+    {
+        return mNode;
+    }
+
+    Alloc allocator() const _ut_noexcept
+    {
+        return mAlloc;
+    }
+
+    const T* get() const _ut_noexcept
+    {
+        return mNode == nullptr ? nullptr : &mNode->value;
+    }
+
+    T* get() _ut_noexcept
+    {
+        return mNode == nullptr ? nullptr : &mNode->value;
+    }
+
+    const T& operator*() const _ut_noexcept
+    {
+        ut_dcheck(mNode != nullptr);
+
+        return mNode->value;
+    }
+
+    T& operator*() _ut_noexcept
+    {
+        ut_dcheck(mNode != nullptr);
+
+        return mNode->value;
+    }
+
+    const T* operator->() const _ut_noexcept
+    {
+        ut_dcheck(mNode != nullptr);
+
+        return &mNode->value;
+    }
+
+    T* operator->() _ut_noexcept
+    {
+        ut_dcheck(mNode != nullptr);
+
+        return &mNode->value;
+    }
+
+    explicit operator bool() const _ut_noexcept
+    {
+        return mNode != nullptr;
+    }
+
+    ContextRef<void, Alloc> operator()() const _ut_noexcept
+    {
+        return ContextRef<void, Alloc>(*this);
+    }
+
+private:
+    struct Node
+    {
+        std::shared_ptr<void> parent;
+        T value;
+
+        template <class ...Args>
+        Node(std::shared_ptr<void> parent, Args&&... args)
+            : parent(std::move(parent))
+            , value(std::forward<Args>(args)...) { }
+    };
+
+    std::shared_ptr<Node> mNode;
+    Alloc mAlloc;
+
+    template <class U, class UAlloc>
+    friend class ContextRef;
+};
+
+template <class Alloc>
+class ContextRef<void, Alloc>
+{
+public:
+    using value_type = void;
+    using alloc_type = Alloc;
+
+    ContextRef() _ut_noexcept { }
+
+    explicit ContextRef(const Alloc& alloc) _ut_noexcept
+        : mAlloc(alloc) { }
+
+    ContextRef(std::shared_ptr<void> parent, const Alloc& alloc) _ut_noexcept
+        : mNode(std::move(parent))
+        , mAlloc(alloc) { }
+
+    ContextRef(std::shared_ptr<void> parent) _ut_noexcept // implicit
+        : ContextRef(parent, Alloc()) { }
+
+    template <class U>
     ContextRef(const ContextRef<U, Alloc>& other) _ut_noexcept
         : mNode(other.mNode)
         , mAlloc(other.mAlloc) { }
@@ -77,8 +190,7 @@ public:
         : mNode(other.mNode)
         , mAlloc(other.mAlloc) { }
 
-    template <class U,
-        class Z = T, EnableIfVoid<Z> = nullptr>
+    template <class U>
     ContextRef(ContextRef<U, Alloc>&& other) _ut_noexcept
         : mNode(std::move(other.mNode))
         , mAlloc(std::move(other.mAlloc)) { }
@@ -87,8 +199,7 @@ public:
         : mNode(std::move(other.mNode))
         , mAlloc(std::move(other.mAlloc)) { }
 
-    template <class U,
-        class Z = T, EnableIfVoid<Z> = nullptr>
+    template <class U>
     ContextRef& operator=(const ContextRef<U, Alloc>& other) _ut_noexcept
     {
         mNode = other.mNode;
@@ -105,8 +216,7 @@ public:
         return *this;
     }
 
-    template <class U,
-        class Z = T, EnableIfVoid<Z> = nullptr>
+    template <class U>
     ContextRef& operator=(ContextRef<U, Alloc>&& other) _ut_noexcept
     {
         ut_assert(this != &other);
@@ -127,6 +237,21 @@ public:
         return *this;
     }
 
+    ContextRef& operator=(std::shared_ptr<void> parent) _ut_noexcept
+    {
+        mNode = std::move(parent);
+
+        return *this;
+    }
+
+    void swap(ContextRef& other) _ut_noexcept
+    {
+        using std::swap;
+
+        swap(mNode, other.mNode);
+        swap(mAlloc, other.mAlloc);
+    }
+
     template <class U, class ...Args>
     ContextRef<U, Alloc> spawn(Args&&... args) const
     {
@@ -139,11 +264,6 @@ public:
         return ContextRef<U, UAlloc>(mNode, alloc, std::forward<Args>(args)...);
     }
 
-    std::shared_ptr<void> parentPtr() const _ut_noexcept
-    {
-        return mNode->parent;
-    }
-
     std::shared_ptr<void> ptr() const _ut_noexcept
     {
         return mNode;
@@ -154,70 +274,54 @@ public:
         return mAlloc;
     }
 
+    explicit operator bool() const _ut_noexcept
+    {
+        return mNode != nullptr;
+    }
+
+    ContextRef<void, Alloc> operator()() const _ut_noexcept
+    {
+        return *this;
+    }
+
 private:
-    std::shared_ptr<detail::ContextNode<T>> mNode;
+    std::shared_ptr<void> mNode;
     Alloc mAlloc;
-
-    template <class U, class UAlloc>
-    friend class ContextRef;
-
-    friend struct ContextRefMixin<T, Alloc>;
 };
 
 template <class T, class Alloc>
-struct ContextRefMixin
+bool operator==(const ContextRef<T, Alloc>& a, std::nullptr_t) _ut_noexcept
 {
-    ContextRef<void, Alloc> operator()() const _ut_noexcept
-    {
-        return ContextRef<void, Alloc>(thiz());
-    }
+    return !a;
+}
 
-    const T& operator*() const
-    {
-        return thiz().mNode->value;
-    }
-
-    T& operator*()
-    {
-        return thiz().mNode->value;
-    }
-
-    const T* operator->() const
-    {
-        return &thiz().mNode->value;
-    }
-
-    T* operator->()
-    {
-        return &thiz().mNode->value;
-    }
-
-private:
-    const ContextRef<T, Alloc>& thiz() const
-    {
-        return static_cast<const ContextRef<T, Alloc>&>(*this); // safe cast
-    }
-
-    ContextRef<T, Alloc>& thiz()
-    {
-        return static_cast<ContextRef<T, Alloc>&>(*this); // safe cast
-    }
-};
-
-template <class Alloc>
-struct ContextRefMixin<void, Alloc>
+template <class T, class Alloc>
+bool operator==(std::nullptr_t, const ContextRef<T, Alloc>& b) _ut_noexcept
 {
-    ContextRef<void, Alloc> operator()() const _ut_noexcept
-    {
-        return thiz();
-    }
+    return b == nullptr;
+}
 
-private:
-    const ContextRef<void, Alloc>& thiz() const
-    {
-        return static_cast<const ContextRef<void, Alloc>&>(*this); // safe cast
-    }
-};
+template <class T, class Alloc>
+bool operator!=(const ContextRef<T, Alloc>& a, std::nullptr_t) _ut_noexcept
+{
+    return !(a == nullptr);
+}
+
+template <class T, class Alloc>
+bool operator!=(std::nullptr_t, const ContextRef<T, Alloc>& b) _ut_noexcept
+{
+    return !(b == nullptr);
+}
+
+template <class T, class Alloc>
+void swap(ContextRef<T, Alloc>& a, ContextRef<T, Alloc>& b) _ut_noexcept
+{
+    a.swap(b);
+}
+
+//
+// Instance generators
+//
 
 template <class T, class Alloc, class ...Args>
 inline ContextRef<T, Alloc> makeContextWithAllocator(const Alloc& alloc, Args&&... args)
