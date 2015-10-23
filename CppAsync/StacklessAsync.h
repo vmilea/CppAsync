@@ -190,8 +190,11 @@ auto startAsync(std::allocator_arg_t, const Allocator& allocator, Args&&... fram
     awaiter_handle_type handle(allocator, std::forward<Args>(frameArgs)...);
 
 #ifdef UT_DISABLE_EXCEPTIONS
-    if (handle.isNil())
-        return Task<result_type>(); // return nil task
+    if (handle == nullptr) {
+        Task<result_type> task;
+        task.cancel();
+        return task; // Return invalid task.
+    }
 #endif
 
     auto task = makeTaskWithListener<listener_type>(std::move(handle));

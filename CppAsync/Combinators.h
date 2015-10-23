@@ -118,8 +118,11 @@ namespace detail
         awaiter_handle_type handle(allocator, std::move(awts));
 
 #ifdef UT_DISABLE_EXCEPTIONS
-        if (handle.isNil())
-            return Task<iterator_type>(); // return nil task
+        if (handle == nullptr) {
+            Task<iterator_type> task;
+            task.cancel();
+            return task; // Return invalid task.
+        }
 #endif
 
         auto task = makeTaskWithListener<listener_type>(std::move(handle));
@@ -259,8 +262,11 @@ namespace detail
         awaiter_handle_type handle(allocator, count, std::move(awts));
 
 #ifdef UT_DISABLE_EXCEPTIONS
-        if (handle.isNil())
-            return Task<iterator_type>(); // return nil task
+        if (handle == nullptr) {
+            Task<iterator_type> task;
+            task.cancel();
+            return task; // Return invalid task.
+        }
 #endif
 
         auto task = makeTaskWithListener<listener_type>(std::move(handle));

@@ -62,9 +62,9 @@ public:
         return (*mData)(arg);
     }
 
-    bool isNil() const _ut_noexcept
+    bool isValid() const _ut_noexcept
     {
-        return mData.isNil();
+        return (bool) mData;
     }
 
     bool isDone() const _ut_noexcept

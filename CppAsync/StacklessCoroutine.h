@@ -266,8 +266,8 @@ Coroutine makeCoroutine(std::allocator_arg_t, const Allocator& allocator, Args&&
         std::forward<Args>(frameArgs)...);
 
 #ifdef UT_DISABLE_EXCEPTIONS
-        if (handle.isNil())
-            return Coroutine(); // Return nil coroutine.
+        if (handle == nullptr)
+            return Coroutine(); // Return invalid coroutine.
 #endif
 
     return Coroutine::wrap(std::move(handle));

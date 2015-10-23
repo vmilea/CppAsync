@@ -300,9 +300,9 @@ public:
         return ptrCast<Interface&>(mData); // safe cast
     }
 
-    bool isNil() const _ut_noexcept
+    explicit operator bool() const _ut_noexcept
     {
-        return mVPtr == nullptr;
+        return !isNil();
     }
 
     void reset() _ut_noexcept
@@ -316,15 +316,20 @@ public:
     }
 
 private:
-    void destruct() _ut_noexcept
+    bool isNil() const _ut_noexcept
     {
-        (*this)->~Interface();
+        return mVPtr == nullptr;
     }
 
     void clear() _ut_noexcept
     {
         // Clear vtable pointer.
         mVPtr = nullptr;
+    }
+
+    void destruct() _ut_noexcept
+    {
+        (*this)->~Interface();
     }
 
     union

@@ -217,20 +217,15 @@ public:
         return static_cast<F*>(action().target()); // safe cast if F is original type
     }
 
-    bool isNil() const _ut_noexcept
-    {
-        return mActionData.isNil();
-    }
-
     explicit operator bool() const _ut_noexcept
     {
-        return !isNil();
+        return (bool) mActionData;
     }
 
     template <class U = R, ut::EnableIfVoid<U> = nullptr>
     void operator()(Args&&... args) const
     {
-        if(isNil())
+        if(!mActionData)
             throw std::logic_error("Trying to call a nil function");
 
         action()(std::forward<Args>(args)...);
@@ -239,7 +234,7 @@ public:
     template <class U = R, ut::DisableIfVoid<U> = nullptr>
     R operator()(Args&&... args) const
     {
-        if(isNil())
+        if(!mActionData)
             throw std::logic_error("Trying to call a nil function");
 
         return action()(std::forward<Args>(args)...);

@@ -184,49 +184,52 @@ public:
         reset();
     }
 
-    bool isNil() const _ut_noexcept
-    {
-        return mData == nullptr;
-    }
-
     explicit operator bool() const _ut_noexcept
     {
-        return !isNil();
+        return mData != nullptr;
     }
 
     const T* get() const _ut_noexcept
     {
-        return isNil() ? nullptr : &mData->core();
+        return mData == nullptr ? nullptr : &mData->core();
     }
 
     T* get() _ut_noexcept
     {
-        return isNil() ? nullptr : &mData->core();
+        return mData == nullptr ? nullptr : &mData->core();
     }
 
     const T* operator->() const _ut_noexcept
     {
+        ut_dcheck(mData != nullptr);
+
         return &mData->core();
     }
 
     T* operator->() _ut_noexcept
     {
+        ut_dcheck(mData != nullptr);
+
         return &mData->core();
     }
 
     const T& operator*() const _ut_noexcept
     {
+        ut_dcheck(mData != nullptr);
+
         return mData->core();
     }
 
     T& operator*() _ut_noexcept
     {
+        ut_dcheck(mData != nullptr);
+
         return mData->core();
     }
 
     void reset() _ut_noexcept
     {
-        if (!isNil()) {
+        if (mData != nullptr) {
             data_type *data = movePtr(mData);
             data_allocator_type a = data->allocator();
             data_allocator_traits::destroy(a, data);
@@ -236,7 +239,7 @@ public:
 
     T* release() _ut_noexcept
     {
-        if (isNil()) {
+        if (mData == nullptr) {
             return nullptr;
         } else {
             T* core = &mData->core();
@@ -253,6 +256,30 @@ public:
 protected:
     data_type *mData;
 };
+
+template <class T, class Alloc>
+bool operator==(const AllocElementPtr<T, Alloc>& a, std::nullptr_t) _ut_noexcept
+{
+    return !a;
+}
+
+template <class T, class Alloc>
+bool operator==(std::nullptr_t, const AllocElementPtr<T, Alloc>& b) _ut_noexcept
+{
+    return b == nullptr;
+}
+
+template <class T, class Alloc>
+bool operator!=(const AllocElementPtr<T, Alloc>& a, std::nullptr_t) _ut_noexcept
+{
+    return !(a == nullptr);
+}
+
+template <class T, class Alloc>
+bool operator!=(std::nullptr_t, const AllocElementPtr<T, Alloc>& b) _ut_noexcept
+{
+    return !(b == nullptr);
+}
 
 template <class T, class Alloc>
 void swap(AllocElementPtr<T, Alloc>& a, AllocElementPtr<T, Alloc>& b) _ut_noexcept

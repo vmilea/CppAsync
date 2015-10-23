@@ -108,21 +108,21 @@ namespace stackful
                 mCoroutine->deallocate();
         }
 
-        bool isNil() const _ut_noexcept
+        bool isValid() const _ut_noexcept
         {
-            return mCoroutine == nullptr;
+            return mCoroutine != nullptr;
         }
 
         bool isDone() const _ut_noexcept
         {
-            ut_dcheck(!isNil());
+            ut_dcheck(isValid());
 
             return mCoroutine->isDone();
         }
 
         void* value() const _ut_noexcept
         {
-            ut_dcheck(!isNil());
+            ut_dcheck(isValid());
 
             return mCoroutine->value();
         }
@@ -135,14 +135,14 @@ namespace stackful
 
         bool operator()(void *arg = nullptr)
         {
-            ut_dcheck(!isNil());
+            ut_dcheck(isValid());
 
             return (*mCoroutine)(arg);
         }
 
         detail::stackful::CoroutineImplBase& raw() _ut_noexcept
         {
-            ut_dcheck(!isNil());
+            ut_dcheck(isValid());
 
             return *mCoroutine;
         }

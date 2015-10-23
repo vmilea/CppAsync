@@ -194,7 +194,7 @@ public:
 
         CommonAwaitable<R>::reset(AwaitableBase::ST_Initial);
 
-        if (!mListener.isNil()) {
+        if (mListener) {
             auto listener = std::move(mListener);
             mListener.reset();
             listener->onDetach();
@@ -336,7 +336,7 @@ private:
 
         Awaiter *awaiter = movePtr(this->mAwaiter);
 
-        if (!mListener.isNil())
+        if (mListener)
             mListener->onDone(*this);
 
         if (awaiter != nullptr)
