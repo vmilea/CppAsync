@@ -357,6 +357,7 @@ namespace detail
 
                 // yield_() may throw ut::ForcedUnwind.
                 void *doneAwt = yield_();
+                (void) doneAwt; // Suppress unused-variable warning.
 
                 ut_assert(doneAwt == nullptr || doneAwt == &awt);
                 ut_assert(awaitable::isReady(awt));

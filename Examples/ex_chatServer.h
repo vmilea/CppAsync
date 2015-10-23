@@ -16,8 +16,6 @@
 
 #pragma once
 
-#ifdef HAVE_BOOST
-
 #include "Common.h"
 #include <CppAsync/util/StringUtil.h>
 #include <cstdio>
@@ -101,5 +99,3 @@ private:
 };
 
 }
-
-#endif // HAVE_BOOST
