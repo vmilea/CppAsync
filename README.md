@@ -17,7 +17,7 @@
 * Full support for exceptions in coroutines
 * Efficient implementation
 * Custom allocators support
-* Applicable even where exceptions are prohibited (embedded friendly)
+* Applicable in projects where exceptions are prohibited (embedded friendly)
 * Boost.Asio wrappers for convenience
 
 
@@ -29,7 +29,7 @@ Intuitively, coroutines are just functions that may be suspended and then resume
 
 This ability to yield to one another and be resumed, combined with ease of use and inherent efficiency, makes coroutines great for writing generators and coordinating async tasks.
 
-Languages like C#, Phython, JavaScript, Dart, and Lua already support coroutines in one form or another via `yield` or `async` / `await` operators. For C++ there is proposal [N4403 - Resumable Functions](https://isocpp.org/files/papers/N4403.pdf) (a kind of stackless coroutines), which might become part of C++17. Here is where CppAsync comes in: it makes these constructs available to you right now in portable C++11, with an easy migration path to the baked-in version once it becomes supported by your target compilers.
+Languages like C#, Phython, JavaScript, Dart, and Lua already support coroutines in one form or another via `yield` or `async` / `await` operators. For C++ there is proposal [N4402](https://isocpp.org/files/papers/N4402.pdf)/[N4499](https://isocpp.org/files/papers/N4499.pdf) - Resumable Functions (a kind of stackless coroutines), which might become part of C++17. Here is where CppAsync comes in: it makes these constructs available to you right now in portable C++11, with an easy migration path to the baked-in version once it becomes supported by your target compilers.
 
 
 ## Overview
@@ -41,7 +41,7 @@ CppAsync has various applications (network or local I/O, responsive UI developme
 The library builds on top of a coroutine layer without being tied to any particular back-end. It supports:
 - Stackless coroutines based on [Duff's device](https://en.wikipedia.org/wiki/Duff%27s_device). They are 100% portable and have minimal overhead, but are somewhat clunky to write.
 - Stackful coroutines on top of Boost.Context. They are supported on [common architectures](http://www.boost.org/doc/libs/1_59_0/libs/context/doc/html/context/architectures.html), fast, simple to write, but harder to debug. For each stackful coroutine at least 4KB of address space has to be reserved.
-- Resumable functions as proposed in N4403. They are similar to the first back-end, with the compiler doing all the heavy lifting instead. There is preliminary support in Visual Studio 2015 (with exception handling notably left out).
+- Resumable functions as proposed in N4402. They are similar to the first back-end, with the compiler doing all the heavy lifting instead. There is preliminary support in Visual Studio 2015 (with exception handling notably left out).
 
 Your application can use different kinds of coroutines under the common `ut::Coroutine` wrapper. You might start with a stackful implementation, then switch to stackless for efficiency.
 
@@ -62,7 +62,7 @@ _Table 1. Creating coroutines on top of supported backends:_
   <tr align="center">
     <td>Duff's device</td>
     <td>Boost.Context</td>
-    <td>N4403 compiler</td>
+    <td>N4402 compiler</td>
   </tr>
 </table>
 
@@ -119,7 +119,7 @@ _Table 3. Creating async coroutines:_
   <tr align="center">
     <td>Duff's device</td>
     <td>Boost.Context</td>
-    <td>N4403 compiler</td>
+    <td>N4402 compiler</td>
   </tr>
 </table>
 
@@ -222,7 +222,7 @@ ut::Task<tcp::endpoint> asyncResolveAndConnect(
 
 ## Adding CppAsync to your project
 
-Just add CppAsync to the include path of your project. There are no mandatory [(*)](#linking-boost-context) dependencies.
+Just add CppAsync to the include path of your project. CppAsync is header-only and there are no mandatory dependencies [(*)](#linking-boost-context).
 
 The library is single threaded, and relies on your application having some kind of event loop (Qt / Boost.Asio / libuv etc.) on top of which async coroutines are going to run and be resumed. Please see examples on how to integrate with Boost.Asio or a custom event loop.
 
@@ -246,7 +246,7 @@ Each sample comes in both stackful and stackless version. If Boost.Context is mi
 
 3. Install [CMake](http://www.cmake.org/cmake/resources/software.html) 3.1 or later.
 
-4. Build CppAsync:
+4. Build CppAsync examples:
 
    - `mkdir build_dir ; cd build_dir`
    - `cmake -G"your-generator" -DBOOST_ROOT="path-to-boost" -DOPENSSL_ROOT_DIR="path-to-openssl" "path-to-cppasync"`
