@@ -31,6 +31,8 @@ void ex_http();
 #ifdef HAVE_OPENSSL
 void ex_flickr();
 #endif
+void ex_chatServer();
+void ex_chatClient();
 #endif // HAVE_BOOST
 void ex_customAwaitable();
 
@@ -42,6 +44,8 @@ void ex_http_s();
 #ifdef HAVE_OPENSSL
 void ex_flickr_s();
 #endif
+void ex_chatServer_s();
+void ex_chatClient_s();
 void ex_customAwaitable_s();
 #endif // HAVE_BOOST_CONTEXT
 
@@ -52,32 +56,36 @@ void ex_countdown_n4402();
 
 static const Example EXAMPLES[] =
 {
-    { &ex_fibo,                 "coroutines - Fibonacci generator" },
-    { &ex_countdown,            "async      - countdown" },
-    { &ex_abortableCountdown,   "async      - abortable countdown" },
+    { &ex_fibo,                 "coro  - Fibonacci generator" },
+    { &ex_countdown,            "async - countdown" },
+    { &ex_abortableCountdown,   "async - abortable countdown" },
 #ifdef HAVE_BOOST
-    { &ex_http,                 "async      - HTTP download" },
+    { &ex_http,                 "async - HTTP download" },
+    { &ex_chatServer,           "async - chat server" },
+    { &ex_chatClient,           "async - chat client" },
 #ifdef HAVE_OPENSSL
-    { &ex_flickr,               "async      - Flickr client" },
+    { &ex_flickr,               "async - Flickr client" },
 #endif
 #endif // HAVE_BOOST
-    { &ex_customAwaitable,      "async      - custom awaitable" },
+    { &ex_customAwaitable,      "async - custom awaitable" },
 
 #ifdef HAVE_BOOST_CONTEXT
-    { &ex_fibo_s,               "coroutines (stackful) - Fibonacci generator" },
-    { &ex_countdown_s,          "async      (stackful) - countdown" },
-    { &ex_abortableCountdown_s, "async      (stackful) - abortable countdown" },
-    { &ex_http_s,               "async      (stackful) - HTTP download" },
+    { &ex_fibo_s,               "coro  (stackful) - Fibonacci generator" },
+    { &ex_countdown_s,          "async (stackful) - countdown" },
+    { &ex_abortableCountdown_s, "async (stackful) - abortable countdown" },
+    { &ex_http_s,               "async (stackful) - HTTP download" },
+    { &ex_chatServer_s,         "async (stackful) - chat server" },
+    { &ex_chatClient_s,         "async (stackful) - chat client" },
 #ifdef HAVE_OPENSSL
-    { &ex_flickr_s,             "async      (stackful) - Flickr client" },
+    { &ex_flickr_s,             "async (stackful) - Flickr client" },
 #endif
-    { &ex_customAwaitable_s,    "async      (stackful) - custom awaitable" },
+    { &ex_customAwaitable_s,    "async (stackful) - custom awaitable" },
 #endif // HAVE_BOOST_CONTEXT
 
 #if defined(_MSC_VER) && _MSC_VER >= 1900
-    { &ex_fibo_n4402,           "coroutines (C++17 resumable functions) - Fibonacci "
+    { &ex_fibo_n4402,           "coro  (C++17 resumable functions) - Fibonacci "
                                 "generator" },
-    { &ex_countdown_n4402,      "async      (C++17 resumable functions) - countdown" },
+    { &ex_countdown_n4402,      "async (C++17 resumable functions) - countdown" },
 #endif
 };
 
