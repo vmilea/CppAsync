@@ -298,7 +298,7 @@ namespace detail
         }
 
         template <class ...Awaitables>
-        bool awaitAnyHelper0Impl(Awaiter& awaiter, AwaitableBase*& outdoneAwt,
+        bool awaitAnyHelper0Impl(Awaiter& awaiter, AwaitableBase*& outDoneAwt,
             Awaitables&&... awts) _ut_noexcept
         {
             using namespace ops;
@@ -309,7 +309,7 @@ namespace detail
             AwaitableBase *doneAwt = find<isReady>(awts...);
 
             if (doneAwt != nullptr) {
-                outdoneAwt = doneAwt;
+                outDoneAwt = doneAwt;
                 return false;
             } else {
                 setAwaiter(&awaiter, awts...);
@@ -318,7 +318,7 @@ namespace detail
         }
 
         template <class ...Awaitables>
-        void awaitAnyHelper1Impl(AwaitableBase& resumer, AwaitableBase*& outdoneAwt,
+        void awaitAnyHelper1Impl(AwaitableBase& resumer, AwaitableBase*& outDoneAwt,
             Awaitables&&... awts) _ut_noexcept
         {
             using namespace ops;
@@ -326,7 +326,7 @@ namespace detail
             ut_assert(resumer.isReady());
             ut_assert(find<isReady>(awts...) == &resumer);
 
-            outdoneAwt = &resumer;
+            outDoneAwt = &resumer;
             setAwaiter(nullptr, awts...);
         }
 
@@ -381,21 +381,21 @@ namespace detail
         //
 
         template <class ...Awaitables>
-        bool awaitAnyHelper0(Awaiter& awaiter, AwaitableBase*& outdoneAwt,
+        bool awaitAnyHelper0(Awaiter& awaiter, AwaitableBase*& outDoneAwt,
             Awaitables&&... awts) _ut_noexcept
         {
             static_assert(All<IsPlainAwtBaseReference<Awaitables>...>::value,
                 "ut_await_any_() expects awts to be non-const lvalue references to AwaitableBase");
 
-            return awaitAnyHelper0Impl(awaiter, outdoneAwt,
+            return awaitAnyHelper0Impl(awaiter, outDoneAwt,
                 static_cast<AwaitableBase&>(awts)...); // safe cast
         }
 
         template <class ...Awaitables>
-        void awaitAnyHelper1(AwaitableBase& resumer, AwaitableBase*& outdoneAwt,
+        void awaitAnyHelper1(AwaitableBase& resumer, AwaitableBase*& outDoneAwt,
             Awaitables&&... awts) _ut_noexcept
         {
-            return awaitAnyHelper1Impl(resumer, outdoneAwt,
+            return awaitAnyHelper1Impl(resumer, outDoneAwt,
                 static_cast<AwaitableBase&>(awts)...); // safe cast
         }
 

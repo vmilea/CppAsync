@@ -348,12 +348,14 @@ namespace detail
         //
 
         template <class Awaitable>
-        void awaitImpl_(Awaitable& awt) _ut_noexcept
+        void awaitImpl_(Awaitable& awt)
         {
             checkAwaitConditions();
 
             if (!awaitable::isReady(awt)) {
                 awaitable::setAwaiter(awt, &context::currentStash());
+
+                // yield_() may throw ut::ForcedUnwind.
                 void *doneAwt = yield_();
 
                 ut_assert(doneAwt == nullptr || doneAwt == &awt);
@@ -362,7 +364,7 @@ namespace detail
         }
 
         template <class It>
-        AwaitableBase* rAwaitAnyNoThrow_(Range<It> range) _ut_noexcept
+        AwaitableBase* rAwaitAnyNoThrow_(Range<It> range)
         {
             using namespace ops;
 
@@ -377,6 +379,7 @@ namespace detail
 
             rSetAwaiter(&context::currentStash(), range);
 
+            // yield_() may throw ut::ForcedUnwind.
             auto *doneAwt = static_cast<AwaitableBase*>(yield_()); // safe cast
 
             ut_assert(doneAwt != nullptr);
@@ -400,7 +403,7 @@ namespace detail
         }
 
         template <class It>
-        AwaitableBase* rAwaitAllNoThrow_(Range<It> range) _ut_noexcept
+        AwaitableBase* rAwaitAllNoThrow_(Range<It> range)
         {
             using namespace ops;
 
@@ -428,6 +431,7 @@ namespace detail
             rSetAwaiter(&context::currentStash(), range);
 
             do {
+                // yield_() may throw ut::ForcedUnwind.
                 auto *doneAwt = static_cast<AwaitableBase*>(yield_()); // safe cast
 
                 ut_assert(doneAwt != nullptr);

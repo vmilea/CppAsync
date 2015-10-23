@@ -91,25 +91,25 @@ struct AsyncFrame;
     \
     _ut_multi_line_macro_end
 
-#define ut_await_any_no_throw_(outdoneAwt, first, second, ...) \
+#define ut_await_any_no_throw_(outDoneAwt, first, second, ...) \
     _ut_multi_line_macro_begin \
     \
-    if (ut::detail::stackless::awaitAnyHelper0(*this->ut_asyncState.self, outdoneAwt, \
+    if (ut::detail::stackless::awaitAnyHelper0(*this->ut_asyncState.self, outDoneAwt, \
             first, second, ##__VA_ARGS__)) { \
         this->ut_coroState.setLastLine(__LINE__); \
         return; \
         case __LINE__: \
-        ut::detail::stackless::awaitAnyHelper1(this->ut_asyncState.resumer(), outdoneAwt, \
+        ut::detail::stackless::awaitAnyHelper1(this->ut_asyncState.resumer(), outDoneAwt, \
             first, second, ##__VA_ARGS__); \
     } \
     \
     _ut_multi_line_macro_end
 
-#define ut_await_any_(outdoneAwt, first, second, ...) \
+#define ut_await_any_(outDoneAwt, first, second, ...) \
     _ut_multi_line_macro_begin \
     \
-    ut_await_any_no_throw_(outdoneAwt, first, second, ##__VA_ARGS__); \
-    _ut_check_for_error(*outdoneAwt); \
+    ut_await_any_no_throw_(outDoneAwt, first, second, ##__VA_ARGS__); \
+    _ut_check_for_error(*outDoneAwt); \
     \
     _ut_multi_line_macro_end
 

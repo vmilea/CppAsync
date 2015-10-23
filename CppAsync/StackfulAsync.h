@@ -92,7 +92,8 @@ namespace stackful
     }
 
     template <class StackAllocator = FixedSizeStack, class F>
-    Task<FunctionResult<F>> startAsync(F&& f, int stackSize = StackAllocator::traits_type::default_size())
+    Task<FunctionResult<F>> startAsync(F&& f,
+        int stackSize = StackAllocator::traits_type::default_size())
     {
         return startAsync(std::forward<F>(f), StackAllocator(stackSize));
     }
@@ -102,13 +103,15 @@ namespace stackful
     //
 
     template <class ...Awaitables>
-    inline AwaitableBase* awaitAnyNoThrow_(Awaitables&&... awts) _ut_noexcept
+    inline AwaitableBase* awaitAnyNoThrow_(Awaitables&&... awts)
     {
         static_assert(All<detail::IsPlainOrRvalueAwtBaseReference<Awaitables&&>...>::value,
             "stackful::awaitAny_() expects awts to be rvalue or non-const lvalue references "
             "to AwaitableBase");
 
         AwaitableBase* list[] = { &awts... };
+
+        // May throw throw only ut::ForcedUnwind.
         return detail::stackful::rAwaitAnyNoThrow_(makeRange(list));
     }
 
@@ -124,13 +127,15 @@ namespace stackful
     }
 
     template <class ...Awaitables>
-    inline AwaitableBase* awaitAllNoThrow_(Awaitables&&... awts) _ut_noexcept
+    inline AwaitableBase* awaitAllNoThrow_(Awaitables&&... awts)
     {
         static_assert(All<detail::IsPlainOrRvalueAwtBaseReference<Awaitables&&>...>::value,
             "stackful::awaitAll_() expects awts to be rvalue or non-const lvalue references "
             "to AwaitableBase");
 
         AwaitableBase* list[] = { &awts... };
+
+        // May throw throw only ut::ForcedUnwind.
         return detail::stackful::rAwaitAllNoThrow_(makeRange(list));
     }
 
@@ -146,12 +151,13 @@ namespace stackful
     }
 
     template <class Awaitable>
-    void awaitNoThrow_(Awaitable&& awt) _ut_noexcept
+    void awaitNoThrow_(Awaitable&& awt)
     {
         static_assert(IsPlainOrRvalueReference<Awaitable&&>::value,
             "stackful::await_() expects awt to be an rvalue or non-const lvalue reference "
             "supported via AwaitableTraits<T>");
 
+        // May throw throw only ut::ForcedUnwind.
         detail::stackful::awaitImpl_(awt);
     }
 
