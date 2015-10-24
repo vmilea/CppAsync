@@ -32,13 +32,13 @@ struct AsyncFrame;
 #include "impl/StacklessAsyncImpl.h"
 
 
-#define ut_begin_lambda(coroState) \
+#define ut_begin_function(coroState) \
     ut::AwaitableBase *_utAwt; \
     (void) _utAwt; \
-    ut_coro_begin_lambda(coroState)
+    ut_coro_begin_function(coroState)
 
 #define ut_begin() \
-    ut_begin_lambda(this->coroState())
+    ut_begin_function(this->coroState())
 
 #define ut_end() \
     ut_coro_end()
@@ -185,16 +185,16 @@ struct AsyncFrame : BasicFrame<AsyncCoroState<R>>
     }
 };
 
-template <class CustomFrame, class Allocator, class ...Args>
-auto startAsync(std::allocator_arg_t, const Allocator& allocator, Args&&... frameArgs)
+template <class CustomFrame, class Alloc, class ...Args>
+auto startAsyncOf(std::allocator_arg_t, const Alloc& alloc, Args&&... frameArgs)
     -> Task<typename detail::stackless::AsyncFrameTraits<CustomFrame>::result_type>
 {
     using result_type = typename detail::stackless::AsyncFrameTraits<CustomFrame>::result_type;
-    using awaiter_type = detail::stackless::AsyncCoroutineAwaiter<CustomFrame, Allocator>;
-    using awaiter_handle_type = AllocElementPtr<awaiter_type, Allocator>;
+    using awaiter_type = detail::stackless::AsyncCoroutineAwaiter<CustomFrame, Alloc>;
+    using awaiter_handle_type = AllocElementPtr<awaiter_type, Alloc>;
     using listener_type = detail::TaskMaster<result_type, awaiter_handle_type>;
 
-    awaiter_handle_type handle(allocator, std::forward<Args>(frameArgs)...);
+    awaiter_handle_type handle(alloc, std::forward<Args>(frameArgs)...);
 
 #ifdef UT_DISABLE_EXCEPTIONS
     if (handle == nullptr) {
@@ -216,18 +216,44 @@ auto startAsync(std::allocator_arg_t, const Allocator& allocator, Args&&... fram
 
 template <class CustomFrame, class Arg0, class ...Args,
     EnableIf<!IsAllocatorArg<Arg0>::value> = nullptr>
-auto startAsync(Arg0&& frameArg0, Args&&... frameArgs)
+auto startAsyncOf(Arg0&& frameArg0, Args&&... frameArgs)
     -> Task<typename detail::stackless::AsyncFrameTraits<CustomFrame>::result_type>
 {
-    return startAsync<CustomFrame>(std::allocator_arg, std::allocator<char>(),
+    return startAsyncOf<CustomFrame>(std::allocator_arg, std::allocator<char>(),
         std::forward<Arg0>(frameArg0), std::forward<Args>(frameArgs)...);
 }
 
 template <class CustomFrame>
-auto startAsync()
+auto startAsyncOf()
     -> Task<typename detail::stackless::AsyncFrameTraits<CustomFrame>::result_type>
 {
-    return startAsync<CustomFrame>(std::allocator_arg, std::allocator<char>());
+    return startAsyncOf<CustomFrame>(std::allocator_arg, std::allocator<char>());
+}
+
+template <class F, class Alloc>
+auto startAsync(F&& f, const Alloc& alloc)
+    -> Task<typename detail::stackless::AsyncFunctionTraits<F>::result_type>
+{
+    using result_type = typename detail::stackless::AsyncFunctionTraits<F>::result_type;
+
+    struct Frame : AsyncFrame<result_type>
+    {
+        Frame(F&& f) : mF(std::move(f)) { }
+
+        void operator()() { mF(this->coroState()); }
+
+    private:
+        F mF;
+    };
+
+    return startAsyncOf<Frame>(std::allocator_arg, alloc, std::move(f));
+}
+
+template <class F>
+auto startAsync(F&& f)
+    -> Task<typename detail::stackless::AsyncFunctionTraits<F>::result_type>
+{
+    return startAsync(std::forward<F>(f), std::allocator<char>());
 }
 
 }

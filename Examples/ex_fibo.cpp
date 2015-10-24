@@ -73,7 +73,7 @@ void ex_fibo()
     // Initialize a stackless coroutine. Stackless coroutines persist their state
     // within the frame object, so they don't waste address space like their stackful
     // counterpart.
-    ut::Coroutine fibo = ut::makeCoroutine<FiboFrame>(n);
+    ut::Coroutine fibo = ut::makeCoroutineOf<FiboFrame>(n);
 
     try {
         // Resume coroutine. Possible outcomes:

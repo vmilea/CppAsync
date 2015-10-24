@@ -40,6 +40,10 @@ namespace detail
             }
         }
 
+        //
+        // Internal coroutine state
+        //
+
         struct CoroStateImpl
         {
             void *lastValue;
@@ -113,6 +117,10 @@ namespace detail
             static const bool value = type::value;
         };
 
+        //
+        // Frame validation -- for ut::makeCoroutineOf<Frame>()
+        //
+
         template <class CustomFrame>
         struct CoroutineFrameTraits
         {
@@ -148,6 +156,32 @@ namespace detail
             }
         };
 
+        //
+        // Function validation -- for ut::makeCoroutine(lambda)
+        //
+
+        template <class F>
+        struct CoroutineFunctionTraits
+        {
+            static_assert(std::is_rvalue_reference<F&&>::value,
+                "Expecting an an rvalue to the coroutine function");
+
+            static_assert(IsFunctor<F>::value,
+                "Expected signature of stackless coroutine function: void f(ut::CoroState&)");
+
+            static_assert(FunctionIsUnary<F>::value,
+                "Expected signature of stackless coroutine function: void f(ut::CoroState&)");
+
+            static_assert(std::is_same<CoroStateImpl&, FunctionArg<F, 0>>::value,
+                "Expected signature of stackless coroutine function: void f(ut::CoroState&)");
+
+            static const bool valid = true;
+        };
+
+        //
+        // Coroutine handle
+        //
+
         template <class Derived, class T>
         struct CoroutineAllocMixin : AllocElementMixin<Derived, T>
         {
@@ -167,9 +201,9 @@ namespace detail
             }
         };
 
-        template <class CustomFrame, class Allocator>
+        template <class CustomFrame, class Alloc>
         using CoroutineAllocHandle = ExtendedAllocElementPtr<
-            StacklessCoroutine<CustomFrame>, Allocator, CoroutineAllocMixin>;
+            StacklessCoroutine<CustomFrame>, Alloc, CoroutineAllocMixin>;
     }
 }
 

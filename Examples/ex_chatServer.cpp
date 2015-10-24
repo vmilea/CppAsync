@@ -69,7 +69,7 @@ public:
 
     void start()
     {
-        mTask = ut::startAsync<MainFrame>(this);
+        mTask = ut::startAsyncOf<MainFrame>(this);
     }
 
 private:
@@ -101,8 +101,8 @@ private:
             thiz->mRoom.add(thiz);
 
             // Start reader & writer coroutines.
-            readerTask = ut::startAsync<ReaderFrame>(thiz);
-            writerTask = ut::startAsync<WriterFrame>(thiz);
+            readerTask = ut::startAsyncOf<ReaderFrame>(thiz);
+            writerTask = ut::startAsyncOf<WriterFrame>(thiz);
 
             // Suspend until /leave or exception.
             ut_await_any_(doneAwt, readerTask, writerTask);
@@ -289,7 +289,7 @@ static ut::Task<void> asyncChatServer(uint16_t port)
         ut::Task<typename session_list_type::iterator> sessionEndedTask;
     };
 
-    return ut::startAsync<Frame>(port);
+    return ut::startAsyncOf<Frame>(port);
 }
 
 }

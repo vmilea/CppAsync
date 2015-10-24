@@ -181,7 +181,7 @@ namespace detail
     {
         using frame_type = detail::HttpGetFrame<asio::ip::tcp::socket>;
 
-        return ut::startAsync<frame_type>(socket, outBuf, ctx,
+        return ut::startAsyncOf<frame_type>(socket, outBuf, ctx,
             host, path, persistentConnection, readAll);
     }
 
@@ -277,7 +277,7 @@ namespace detail
     {
         using frame_type = detail::HttpGetFrame<asio::ssl::stream<asio::ip::tcp::socket>>;
 
-        return ut::startAsync<frame_type>(socket, outBuf, ctx,
+        return ut::startAsyncOf<frame_type>(socket, outBuf, ctx,
             host, path, persistentConnection, readAll);
     }
 
@@ -290,7 +290,7 @@ ut::Task<size_t> asyncHttpDownload(asio::io_service& io, asio::streambuf& outBuf
 {
     using frame_type = detail::HttpDownloadFrame;
 
-    return ut::startAsync<frame_type>(io, outBuf, ctx, host, path);
+    return ut::startAsyncOf<frame_type>(io, outBuf, ctx, host, path);
 }
 
 #ifdef HAVE_OPENSSL
@@ -302,7 +302,7 @@ ut::Task<asio::ip::tcp::endpoint> asyncHttpsClientConnect(
 {
     using frame_type = detail::HttpsClientConnectFrame;
 
-    return ut::startAsync<frame_type>(socket, ctx, host);
+    return ut::startAsyncOf<frame_type>(socket, ctx, host);
 }
 
 ut::Task<size_t> asyncHttpsDownload(asio::io_service& io, asio::streambuf& outBuf,
@@ -312,7 +312,7 @@ ut::Task<size_t> asyncHttpsDownload(asio::io_service& io, asio::streambuf& outBu
 {
     using frame_type = detail::HttpsDownloadFrame;
 
-    return ut::startAsync<frame_type>(io, outBuf, ctx, sslVersion, host, path);
+    return ut::startAsyncOf<frame_type>(io, outBuf, ctx, sslVersion, host, path);
 }
 
 ut::Task<void> asyncShutdown(asio::ssl::stream<asio::ip::tcp::socket>& socket,

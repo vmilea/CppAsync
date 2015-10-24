@@ -51,6 +51,10 @@ namespace detail
 {
     namespace stackless
     {
+        //
+        // Internal coroutine state
+        //
+
         template <class R>
         struct AsyncCoroStateImpl : CoroStateImpl
         {
@@ -71,7 +75,7 @@ namespace detail
         };
 
         //
-        // Frame validation
+        // Frame validation -- for ut::startAsyncOf<Frame>()
         //
 
         template <class CustomFrame>
@@ -93,16 +97,50 @@ namespace detail
         };
 
         //
+        // Function validation -- for ut::startAsync(lambda)
+        //
+
+        template <class F>
+        struct AsyncFunctionTraits
+        {
+            static_assert(std::is_rvalue_reference<F&&>::value,
+                "Stackless startAsync() expects an rvalue to the coroutine function");
+
+            static_assert(IsFunctor<F>::value,
+                "Stackless startAsync() expects function signature: "
+                "void f(ut::AsyncCoroState<R>&)");
+
+            static_assert(FunctionIsUnary<F>::value,
+                "Stackless startAsync() expects function signature: "
+                "void f(ut::AsyncCoroState<R>&)");
+
+        private:
+            using arg0_type = FunctionArg<F, 0>;
+            using coro_state_type = RemoveReference<arg0_type>;
+
+            static_assert(HasResultType<coro_state_type>::value,
+                "Stackless startAsync() expects function signature: "
+                "void f(ut::AsyncCoroState<R>&)");
+
+        public:
+            using result_type = typename coro_state_type::result_type;
+
+            static_assert(std::is_same<AsyncCoroStateImpl<result_type>, coro_state_type>::value,
+                "Stackless startAsync() expects function signature: "
+                "void f(ut::AsyncCoroState<R>&)");
+        };
+
+        //
         // Task coroutine
         //
 
-        template <class CustomFrame, class Allocator>
+        template <class CustomFrame, class Alloc>
         struct AsyncCoroutineAwaiter : Awaiter
         {
             StacklessCoroutine<CustomFrame> coroutine;
 
             using result_type = typename AsyncFrameTraits<CustomFrame>::result_type;
-            using handle_type = AllocElementPtr<AsyncCoroutineAwaiter, Allocator>;
+            using handle_type = AllocElementPtr<AsyncCoroutineAwaiter, Alloc>;
 
             template <class ...Args>
             AsyncCoroutineAwaiter(Args&&... frameArgs)

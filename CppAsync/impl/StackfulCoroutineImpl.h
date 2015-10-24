@@ -38,6 +38,10 @@ namespace detail
 
         class CoroutineImplBase;
 
+        //
+        // Coroutine call chain
+        //
+
         namespace context
         {
             namespace impl
@@ -82,11 +86,15 @@ namespace detail
             }
         }
 
+        //
+        // Function validation -- for ut::stackful::makeCoroutine(lambda)
+        //
+
         template <class F>
         struct CoroutineFunctionTraits
         {
-            static_assert(std::is_rvalue_reference<F&&>::value,
-                "Expecting an an rvalue to the coroutine function");
+            static_assert(std::is_same<F, Unqualified<F>>::value,
+                "Expecting an unqualified type");
 
             static_assert(IsFunctor<F>::value,
                 "Expected signature of stackful coroutine function: void f() or void f(void *initialValue)");
@@ -111,6 +119,10 @@ namespace detail
 
             static const bool valid = true;
         };
+
+        //
+        // Stackful coroutine implementation
+        //
 
         class CoroutineImplBase
         {

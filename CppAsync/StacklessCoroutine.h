@@ -36,14 +36,14 @@ class StacklessCoroutine;
 #include "impl/StacklessCoroutineImpl.h"
 
 
-#define ut_coro_begin_lambda(coroState) \
+#define ut_coro_begin_function(coroState) \
     auto& _ut_coroState = coroState; \
     uint32_t _ut_resumePoint = _ut_coroState.resumePoint(); \
     _ut_coroState.setLastLine(0); \
     switch (_ut_resumePoint) { case 0:
 
 #define ut_coro_begin() \
-    ut_coro_begin_lambda(this->coroState())
+    ut_coro_begin_function(this->coroState())
 
 #define ut_coro_end() \
     return; \
@@ -281,7 +281,7 @@ private:
 //
 
 template <class CustomFrame, class Alloc, class ...Args>
-Coroutine makeCoroutine(std::allocator_arg_t, const Alloc& alloc, Args&&... frameArgs)
+Coroutine makeCoroutineOf(std::allocator_arg_t, const Alloc& alloc, Args&&... frameArgs)
 {
     detail::stackless::CoroutineAllocHandle<CustomFrame, Alloc> handle(alloc,
         std::forward<Args>(frameArgs)...);
@@ -296,16 +296,40 @@ Coroutine makeCoroutine(std::allocator_arg_t, const Alloc& alloc, Args&&... fram
 
 template <class CustomFrame, class Arg0, class ...Args,
     EnableIf<!IsAllocatorArg<Arg0>::value> = nullptr>
-Coroutine makeCoroutine(Arg0&& frameArg0, Args&&... frameArgs)
+Coroutine makeCoroutineOf(Arg0&& frameArg0, Args&&... frameArgs)
 {
-    return makeCoroutine<CustomFrame>(std::allocator_arg, std::allocator<char>(),
+    return makeCoroutineOf<CustomFrame>(std::allocator_arg, std::allocator<char>(),
         std::forward<Arg0>(frameArg0), std::forward<Args>(frameArgs)...);
 }
 
 template <class CustomFrame>
-Coroutine makeCoroutine()
+Coroutine makeCoroutineOf()
 {
-    return makeCoroutine<CustomFrame>(std::allocator_arg, std::allocator<char>());
+    return makeCoroutineOf<CustomFrame>(std::allocator_arg, std::allocator<char>());
+}
+
+template <class F, class Alloc>
+Coroutine makeCoroutine(F&& f, const Alloc& alloc)
+{
+    static_assert(detail::stackless::CoroutineFunctionTraits<F>::valid, "");
+
+    struct Frame : ut::Frame
+    {
+        Frame(F&& f) : mF(std::move(f)) { }
+
+        void operator()() { mF(this->coroState()); }
+
+    private:
+        F mF;
+    };
+
+    return makeCoroutineOf<Frame>(std::allocator_arg, alloc, std::move(f));
+}
+
+template <class F>
+Coroutine makeCoroutine(F&& f)
+{
+    return makeCoroutine(std::forward<F>(f), std::allocator<char>());
 }
 
 }

@@ -72,7 +72,7 @@ static ut::Task<void> asyncCountdown()
         boost::shared_future<int> future;
     };
 
-    return ut::startAsync<Frame>();
+    return ut::startAsyncOf<Frame>();
 }
 
 void ex_customAwaitable()

@@ -197,7 +197,7 @@ static ut::Task<void> asyncFlickrDownload(const std::vector<std::string>& tags,
         ut::Task<DownloadSlot*> anyDownloadTask;
     };
 
-    return ut::startAsync<Frame>(std::move(tags), numPics, numPicsPerPage);
+    return ut::startAsyncOf<Frame>(std::move(tags), numPics, numPicsPerPage);
 }
 
 }

@@ -55,7 +55,7 @@ public:
 
     void start()
     {
-        mTask = ut::startAsync<MainFrame>(this);
+        mTask = ut::startAsyncOf<MainFrame>(this);
     }
 
 private:
@@ -92,8 +92,8 @@ private:
             std::thread([this] { thiz->inputFunc(); }).detach();
 
             // Start reader & writer coroutines.
-            readerTask = ut::startAsync<ReaderFrame>(thiz);
-            writerTask = ut::startAsync<WriterFrame>(thiz);
+            readerTask = ut::startAsyncOf<ReaderFrame>(thiz);
+            writerTask = ut::startAsyncOf<WriterFrame>(thiz);
 
             // Suspend until /leave or exception.
             ut_await_any_(doneAwt, readerTask, writerTask);

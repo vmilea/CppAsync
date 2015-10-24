@@ -212,10 +212,10 @@ namespace experimental
     {
         using promise_type = ut::detail::experimental::TaskPromise<R>;
 
-        template <class Allocator, class ...Args>
-        static Allocator get_allocator(std::allocator_arg_t, const Allocator& allocator, Args&&...)
+        template <class Alloc, class ...Args>
+        static Alloc get_allocator(std::allocator_arg_t, const Alloc& alloc, Args&&...)
         {
-            return allocator;
+            return alloc;
         }
 
 #ifdef UT_DISABLE_EXCEPTIONS

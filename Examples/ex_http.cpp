@@ -68,7 +68,7 @@ static ut::Task<void> asyncHttpDownload(asio::streambuf& outBuf,
         ut::Task<size_t> downloadTask;
     };
 
-    return ut::startAsync<Frame>(outBuf, std::move(host), std::move(path));
+    return ut::startAsyncOf<Frame>(outBuf, std::move(host), std::move(path));
 }
 
 void ex_http()

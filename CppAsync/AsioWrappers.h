@@ -261,7 +261,7 @@ auto asyncConnectToAny(Socket& socket, const ContextRef<RefT, Alloc>& ctx,
 {
     using frame_type = detail::ConnectToAnyFrame<Socket, Alloc>;
 
-    return ut::startAsync<frame_type>(socket, ctx, endpoints);
+    return ut::startAsyncOf<frame_type>(socket, ctx, endpoints);
 }
 
 template <class Socket, class RefT, class Alloc>
@@ -271,7 +271,7 @@ auto asyncResolveAndConnect(Socket& socket, const ContextRef<RefT, Alloc>& ctx,
 {
     using frame_type = detail::ResolveAndConnectFrame<Socket, Alloc>;
 
-    return ut::startAsync<frame_type>(socket, ctx, query);
+    return ut::startAsyncOf<frame_type>(socket, ctx, query);
 }
 
 template <class Acceptor, class PeerSocket, class RefT, class Alloc>

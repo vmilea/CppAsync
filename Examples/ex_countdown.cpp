@@ -80,7 +80,7 @@ void ex_countdown()
     // startAsync() packages an asynchronous coroutine as a Task. Tasks are a generic, composable
     // representation of asynchronous operations. They serve as building blocks that may be awaited
     // from within other asynchronous coroutines.
-    ut::Task<void> task = ut::startAsync<CountdownFrame>(n);
+    ut::Task<void> task = ut::startAsyncOf<CountdownFrame>(n);
 
     // In order to do meaningful work CppAsync requires some kind of run loop (Qt / GTK /
     // MFC / Boost.Asio / ...). Events should be dispatched to the run loop, enabling

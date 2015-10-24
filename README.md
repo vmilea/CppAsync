@@ -216,7 +216,7 @@ ut::Task<tcp::endpoint> asyncResolveAndConnect(
         ut::Task<void> connectTask;
     };
 
-    return ut::startAsync<Frame>(socket, query);
+    return ut::startAsyncOf<Frame>(socket, query);
 }
 ```
 

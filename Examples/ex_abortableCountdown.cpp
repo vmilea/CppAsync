@@ -101,7 +101,7 @@ void ex_abortableCountdown()
     // 5 second countdown
     const int n = 5;
 
-    ut::Task<void> task = ut::startAsync<CountdownFrame>(n);
+    ut::Task<void> task = ut::startAsyncOf<CountdownFrame>(n);
 
     // Loop until there are no more scheduled operations.
     sLooper.run();

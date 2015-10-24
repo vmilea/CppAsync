@@ -32,6 +32,10 @@ namespace detail
 {
     namespace stackful
     {
+        //
+        // Function validation -- for ut::stackful::startAsync(lambda)
+        //
+
         template <class F>
         struct AsyncFunctionTraits
         {
@@ -88,6 +92,10 @@ namespace detail
         template <class R>
         class AsyncCoroutineAwaiter;
 
+        //
+        // Async function wrapper
+        //
+
         template <class F>
         class AsyncCoroutineFunction
             : public StashFunctionBase<AsyncCoroutineAwaiter<FunctionResult<F>>>
@@ -113,6 +121,10 @@ namespace detail
 
             F mF;
         };
+
+        //
+        // Coroutine manager
+        //
 
         class AsyncCoroutineAwaiterBase : public Awaiter
         {
