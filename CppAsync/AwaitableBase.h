@@ -189,6 +189,12 @@ AwaitableBase& selectAwaitable(const std::unique_ptr<T, Deleter>& item) _ut_noex
 }
 
 template <class T>
+AwaitableBase& selectAwaitable(const std::shared_ptr<T>& item) _ut_noexcept
+{
+    return selectAwaitable(*item);
+}
+
+template <class T>
 AwaitableBase& selectAwaitable(const std::reference_wrapper<T>& item) _ut_noexcept
 {
     return selectAwaitable(item.get());

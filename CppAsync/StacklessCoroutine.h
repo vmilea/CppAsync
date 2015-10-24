@@ -25,7 +25,8 @@
 
 namespace ut {
 
-struct Frame;
+template <class State>
+struct BasicFrame;
 
 template <class Frame>
 class StacklessCoroutine;
@@ -35,10 +36,14 @@ class StacklessCoroutine;
 #include "impl/StacklessCoroutineImpl.h"
 
 
-#define ut_coro_begin() \
-    uint32_t _ut_resumePoint = this->ut_coroState.resumePoint(); \
-    this->ut_coroState.setLastLine(0); \
+#define ut_coro_begin_lambda(coroState) \
+    auto& _ut_coroState = coroState; \
+    uint32_t _ut_resumePoint = _ut_coroState.resumePoint(); \
+    _ut_coroState.setLastLine(0); \
     switch (_ut_resumePoint) { case 0:
+
+#define ut_coro_begin() \
+    ut_coro_begin_lambda(this->coroState())
 
 #define ut_coro_end() \
     return; \
@@ -50,26 +55,26 @@ class StacklessCoroutine;
 
 #define ut_coro_suspend_() \
     _ut_multi_line_macro_begin \
-    this->ut_coroState.setLastLine(__LINE__); \
+    _ut_coroState.setLastLine(__LINE__); \
     return; \
     case __LINE__: ; \
     _ut_multi_line_macro_end
 
 #define ut_coro_yield_(x) \
     _ut_multi_line_macro_begin \
-    this->ut_coroState.lastValue = x; \
+    _ut_coroState.lastValue = x; \
     ut_coro_suspend_(); \
     _ut_multi_line_macro_end
 
 #define ut_coro_set_exception_handler(handlerId) \
-    this->ut_coroState.setExceptionHandler(handlerId)
+    _ut_coroState.setExceptionHandler(handlerId)
 
 #define ut_coro_clear_exception_handler() \
-    this->ut_coroState.clearExceptionHandler()
+    _ut_coroState.clearExceptionHandler()
 
 #define ut_coro_handler(handlerId) \
     case (uint32_t) handlerId << 24: \
-    this->ut_coroState.clearExceptionHandler(); \
+    _ut_coroState.clearExceptionHandler(); \
     if (!ut::isNil(ut::detail::stackless::context::loopbackException())) \
         try { \
             auto eptr = std::move(ut::detail::stackless::context::loopbackException()); \
@@ -106,17 +111,33 @@ class StacklessCoroutine;
 
 namespace ut {
 
-struct Frame
+template <class State>
+struct BasicFrame
 {
-    Frame() = default;
+    using coro_state_type = State;
 
-    // Internal state
-    detail::stackless::FrameState ut_coroState;
+    BasicFrame() = default;
+
+    const State& coroState() const _ut_noexcept
+    {
+        return mState;
+    }
+
+    State& coroState() _ut_noexcept
+    {
+        return mState;
+    }
 
 private:
-    Frame(const Frame& other) = delete;
-    Frame& operator=(const Frame& other) = delete;
+    BasicFrame(const BasicFrame& other) = delete;
+    BasicFrame& operator=(const BasicFrame& other) = delete;
+
+    State mState;
 };
+
+using CoroState = detail::stackless::CoroStateImpl;
+
+using Frame = BasicFrame<CoroState>;
 
 struct StacklessCoroutineStatus
 {
@@ -157,12 +178,12 @@ public:
 
     bool isDone() const _ut_noexcept
     {
-        return mFrame.ut_coroState.isDone();
+        return mFrame.coroState().isDone();
     }
 
     void* value() const _ut_noexcept
     {
-        return mFrame.ut_coroState.lastValue;
+        return mFrame.coroState().lastValue;
     }
 
     const CustomFrame& frame() const _ut_noexcept
@@ -198,7 +219,7 @@ public:
             "Can't resume a coroutine after it has finished");
 
         auto& loopbackException = detail::stackless::context::loopbackException();
-        auto& coroState = mFrame.ut_coroState;
+        auto& coroState = mFrame.coroState();
 
         coroState.lastValue = nullptr;
 
@@ -259,10 +280,10 @@ private:
 // Instance generators
 //
 
-template <class CustomFrame, class Allocator, class ...Args>
-Coroutine makeCoroutine(std::allocator_arg_t, const Allocator& allocator, Args&&... frameArgs)
+template <class CustomFrame, class Alloc, class ...Args>
+Coroutine makeCoroutine(std::allocator_arg_t, const Alloc& alloc, Args&&... frameArgs)
 {
-    detail::stackless::CoroutineAllocHandle<CustomFrame, Allocator> handle(allocator,
+    detail::stackless::CoroutineAllocHandle<CustomFrame, Alloc> handle(alloc,
         std::forward<Args>(frameArgs)...);
 
 #ifdef UT_DISABLE_EXCEPTIONS

@@ -32,10 +32,13 @@ struct AsyncFrame;
 #include "impl/StacklessAsyncImpl.h"
 
 
-#define ut_begin() \
+#define ut_begin_lambda(coroState) \
     ut::AwaitableBase *_utAwt; \
     (void) _utAwt; \
-    ut_coro_begin()
+    ut_coro_begin_lambda(coroState)
+
+#define ut_begin() \
+    ut_begin_lambda(this->coroState())
 
 #define ut_end() \
     ut_coro_end()
@@ -43,7 +46,7 @@ struct AsyncFrame;
 #define ut_return(result) \
     _ut_multi_line_macro_begin \
     \
-    this->ut_asyncState.promise->complete(result); \
+    _ut_coroState.promise->complete(result); \
     return; \
     \
     _ut_multi_line_macro_end
@@ -74,11 +77,11 @@ struct AsyncFrame;
 #define ut_await_no_throw_(awt) \
     _ut_multi_line_macro_begin \
     \
-    if (ut::detail::stackless::awaitHelper0(*this->ut_asyncState.self, awt)) { \
-        this->ut_coroState.setLastLine(__LINE__); \
+    if (ut::detail::stackless::awaitHelper0(*_ut_coroState.self, awt)) { \
+        _ut_coroState.setLastLine(__LINE__); \
         return; \
         case __LINE__: \
-        ut::detail::stackless::awaitHelper1(this->ut_asyncState.arg, awt); \
+        ut::detail::stackless::awaitHelper1(_ut_coroState.arg, awt); \
         } \
     \
     _ut_multi_line_macro_end
@@ -94,12 +97,12 @@ struct AsyncFrame;
 #define ut_await_any_no_throw_(outDoneAwt, first, second, ...) \
     _ut_multi_line_macro_begin \
     \
-    if (ut::detail::stackless::awaitAnyHelper0(*this->ut_asyncState.self, outDoneAwt, \
+    if (ut::detail::stackless::awaitAnyHelper0(*_ut_coroState.self, outDoneAwt, \
             first, second, ##__VA_ARGS__)) { \
-        this->ut_coroState.setLastLine(__LINE__); \
+        _ut_coroState.setLastLine(__LINE__); \
         return; \
         case __LINE__: \
-        ut::detail::stackless::awaitAnyHelper1(this->ut_asyncState.resumer(), outDoneAwt, \
+        ut::detail::stackless::awaitAnyHelper1(_ut_coroState.resumer(), outDoneAwt, \
             first, second, ##__VA_ARGS__); \
     } \
     \
@@ -116,14 +119,14 @@ struct AsyncFrame;
 #define ut_await_all_no_throw_(outFailedAwt, first, second, ...) \
     _ut_multi_line_macro_begin \
     \
-    if (ut::detail::stackless::awaitAll_Helper0(*this->ut_asyncState.self, outFailedAwt, \
+    if (ut::detail::stackless::awaitAll_Helper0(*_ut_coroState.self, outFailedAwt, \
             first, second, ##__VA_ARGS__)) { \
-        this->ut_coroState.setLastLine(__LINE__); \
+        _ut_coroState.setLastLine(__LINE__); \
         return; \
         case __LINE__: \
-        if (ut::detail::stackless::awaitAll_Helper1(this->ut_asyncState.resumer(), outFailedAwt, \
+        if (ut::detail::stackless::awaitAll_Helper1(_ut_coroState.resumer(), outFailedAwt, \
                 first, second, ##__VA_ARGS__)) { \
-            this->ut_coroState.setLastLine(__LINE__); \
+            _ut_coroState.setLastLine(__LINE__); \
             return; \
         } \
     } \
@@ -143,16 +146,23 @@ struct AsyncFrame;
 namespace ut {
 
 template <class R>
-struct AsyncFrame : ut::Frame
+using AsyncCoroState = detail::stackless::AsyncCoroStateImpl<R>;
+
+template <class R>
+struct AsyncFrame : BasicFrame<AsyncCoroState<R>>
 {
     using result_type = R;
 
-    AsyncFrame(const void *startupArg = nullptr)
-        : ut_asyncState(const_cast<void*>(startupArg)) { }
+    AsyncFrame() = default;
+
+    explicit AsyncFrame(const void *startupArg) _ut_noexcept
+    {
+        this->coroState().arg = const_cast<void*>(startupArg);
+    }
 
     Promise<R> takePromise() _ut_noexcept
     {
-        Promise<R>& promise = *ut_asyncState.promise;
+        Promise<R>& promise = *this->coroState().promise;
 
         ut_dcheck(promise.state() != PromiseBase::ST_Moved &&
             "Promise already taken");
@@ -163,19 +173,16 @@ struct AsyncFrame : ut::Frame
         return std::move(promise);
     }
 
-    void* arg() const
+    void* arg() const _ut_noexcept
     {
-        return ut_asyncState.arg;
+        return this->coroState().arg;
     }
 
     template <class T>
-    T& argAs() const
+    T& argAs() const _ut_noexcept
     {
         return *static_cast<T*>(arg()); // safe cast if T is original type
     }
-
-    // Internal state
-    detail::stackless::AsyncFrameState<R> ut_asyncState;
 };
 
 template <class CustomFrame, class Allocator, class ...Args>
@@ -200,8 +207,8 @@ auto startAsync(std::allocator_arg_t, const Allocator& allocator, Args&&... fram
     auto task = makeTaskWithListener<listener_type>(std::move(handle));
     awaiter_type& awaiter = *task.template listenerAs<listener_type>().resource;
 
-    awaiter.coroutine.frame().ut_asyncState.self = &awaiter;
-    awaiter.coroutine.frame().ut_asyncState.promise.initialize(task.takePromise());
+    awaiter.coroutine.frame().coroState().self = &awaiter;
+    awaiter.coroutine.frame().coroState().promise.initialize(task.takePromise());
     awaiter.start();
 
     return task;

@@ -27,7 +27,7 @@
 
 #define _ut_check_for_error(awt) \
     if (ut::detail::awaitable::hasError(awt)) { \
-        this->ut_asyncState.promise->fail(ut::detail::awaitable::takeError(awt)); \
+        _ut_coroState.promise->fail(ut::detail::awaitable::takeError(awt)); \
         return; \
     }
 
@@ -52,17 +52,19 @@ namespace detail
     namespace stackless
     {
         template <class R>
-        struct AsyncFrameState
+        struct AsyncCoroStateImpl : CoroStateImpl
         {
+            using result_type = R;
+
             Instance<Promise<R>> promise;
             Awaiter *self;
             void *arg;
 
-            AsyncFrameState(void *startupArg) _ut_noexcept
+            AsyncCoroStateImpl() _ut_noexcept
                 : self(nullptr)
-                , arg(startupArg) { }
+                , arg(nullptr) { }
 
-            AwaitableBase& resumer()
+            AwaitableBase& resumer() _ut_noexcept
             {
                 return *static_cast<AwaitableBase*>(arg); // safe cast
             }
@@ -108,7 +110,7 @@ namespace detail
 
             ~AsyncCoroutineAwaiter()
             {
-                auto state = coroutine.frame().ut_asyncState.promise->state();
+                auto state = coroutine.frame().coroState().promise->state();
 
                 switch (state)
                 {
@@ -142,7 +144,7 @@ namespace detail
 
             void resume(AwaitableBase *resumer) _ut_noexcept final
             {
-                coroutine.frame().ut_asyncState.arg = resumer;
+                coroutine.frame().coroState().arg = resumer;
                 execute();
             }
 
@@ -152,7 +154,7 @@ namespace detail
 
             void execute() _ut_noexcept
             {
-                Promise<result_type>& promise = *coroutine.frame().ut_asyncState.promise;
+                Promise<result_type>& promise = *coroutine.frame().coroState().promise;
 
                 ut_dcheck(promise.state() != PromiseBase::ST_Moved &&
                     "Async coroutine may not be resumed after taking over promise");
@@ -165,7 +167,7 @@ namespace detail
                 switch (coroutine.resume().value)
                 {
                 case StacklessCoroutineStatus::SC_Done:
-                    coroutine.frame().ut_asyncState.arg = nullptr;
+                    coroutine.frame().coroState().arg = nullptr;
                     state = promise.state();
 
                     if (isNil(context::loopbackException())) {
@@ -236,7 +238,7 @@ namespace detail
                     }
                     break;
                 case StacklessCoroutineStatus::SC_Suspended:
-                    coroutine.frame().ut_asyncState.arg = nullptr;
+                    coroutine.frame().coroState().arg = nullptr;
                     state = promise.state();
 
                     ut_dcheck(state != PromiseBase::ST_Moved &&

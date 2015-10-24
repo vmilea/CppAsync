@@ -40,12 +40,12 @@ namespace detail
             }
         }
 
-        struct FrameState
+        struct CoroStateImpl
         {
             void *lastValue;
             uint32_t lastState;
 
-            FrameState() _ut_noexcept
+            CoroStateImpl() _ut_noexcept
                 : lastValue(nullptr)
                 , lastState(0) { }
 
@@ -102,11 +102,26 @@ namespace detail
             }
         };
 
+        template <typename T>
+        class HasCoroStateType
+        {
+            template <class U> static std::true_type test(typename U::coro_state_type*);
+            template <class U> static std::false_type test(...);
+
+        public:
+            using type = decltype(test<T>(nullptr));
+            static const bool value = type::value;
+        };
+
         template <class CustomFrame>
         struct CoroutineFrameTraits
         {
-            static_assert(std::is_base_of<ut::Frame, CustomFrame>::value,
-                "Frame must derive from ut::Frame");
+            static_assert(HasCoroStateType<CustomFrame>::value,
+                "Frame must derive from ut::Frame or ut::AsyncFrame<R>");
+
+            static_assert(std::is_base_of<
+                    CoroStateImpl, typename CustomFrame::coro_state_type>::value,
+                "Frame must derive from ut::Frame or ut::AsyncFrame<R>");
 
             static_assert(IsFunctor<CustomFrame>::value,
                 "Frame must be a functor with signature: "
