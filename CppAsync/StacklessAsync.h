@@ -230,7 +230,8 @@ auto startAsyncOf()
     return startAsyncOf<CustomFrame>(std::allocator_arg, std::allocator<char>());
 }
 
-template <class F, class Alloc>
+template <class F, class Alloc,
+    EnableIf<IsFunctor<Unqualified<F>>::value> = nullptr>
 auto startAsync(F&& f, const Alloc& alloc)
     -> Task<typename detail::stackless::AsyncFunctionTraits<F>::result_type>
 {
@@ -249,11 +250,26 @@ auto startAsync(F&& f, const Alloc& alloc)
     return startAsyncOf<Frame>(std::allocator_arg, alloc, std::move(f));
 }
 
-template <class F>
+template <class F,
+    EnableIf<IsFunctor<Unqualified<F>>::value> = nullptr>
 auto startAsync(F&& f)
     -> Task<typename detail::stackless::AsyncFunctionTraits<F>::result_type>
 {
     return startAsync(std::forward<F>(f), std::allocator<char>());
+}
+
+template <class T, class R, class Alloc>
+Task<R> startAsync(T *object, void (T::*method)(AsyncCoroState<R>&), const Alloc& alloc)
+{
+    return startAsync([object, method](AsyncCoroState<R>& coroState) {
+        (object->*method)(coroState);
+    }, alloc);
+}
+
+template <class T, class R>
+Task<R> startAsync(T *object, void (T::*method)(AsyncCoroState<R>&))
+{
+    return startAsync(object, method, std::allocator<char>());
 }
 
 }
