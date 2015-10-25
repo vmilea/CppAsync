@@ -31,8 +31,13 @@ T lexicalCastImpl(const std::string& s)
     T value;
     ss >> value;
 
+#ifdef UT_NO_EXCEPTIONS
+    if (ss.fail())
+        return T();
+#else
     if (ss.fail())
         throw std::invalid_argument("Lexical cast failed");
+#endif
 
     return value;
 }

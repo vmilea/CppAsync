@@ -40,7 +40,7 @@
 
 #include "../CppAsync/impl/Common.h"
 
-#ifdef UT_DISABLE_EXCEPTIONS
+#ifdef UT_NO_EXCEPTIONS
 
 #define BOOST_NO_EXCEPTIONS
 
@@ -52,4 +52,4 @@ namespace boost
     }
 }
 
-#endif // UT_DISABLE_EXCEPTIONS
+#endif // UT_NO_EXCEPTIONS

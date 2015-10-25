@@ -46,7 +46,7 @@ namespace detail
                     continue;
 
                 if (action.triggerTime <= now) {
-#ifdef UT_DISABLE_EXCEPTIONS
+#ifdef UT_NO_EXCEPTIONS
                     action.f();
 #else
                     try {

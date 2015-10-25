@@ -67,7 +67,7 @@
 // Aliases to deal with exceptions ban
 //
 
-#ifdef UT_DISABLE_EXCEPTIONS
+#ifdef UT_NO_EXCEPTIONS
 
 #define _ut_try       if (true)
 #define _ut_catch(x)  if (false)
@@ -128,7 +128,7 @@ namespace ut
         return !(a == b);
     }
 
-    inline bool isNil(const Error& eptr) _ut_noexcept
+    inline bool isNil(const Error& error) _ut_noexcept
     {
         return error == Error();
     }
@@ -185,7 +185,7 @@ namespace ut
     }
 }
 
-#endif // UT_DISABLE_EXCEPTIONS
+#endif // UT_NO_EXCEPTIONS
 
 //
 // Common types for overloading and placeholders

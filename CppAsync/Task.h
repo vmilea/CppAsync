@@ -500,7 +500,7 @@ public:
         task()->fail(std::move(error));
     }
 
-#ifdef UT_DISABLE_EXCEPTIONS
+#ifdef UT_NO_EXCEPTIONS
     void fail(Error::value_type error) _ut_noexcept
     {
         fail(Error(std::move(error)));
@@ -664,7 +664,7 @@ public:
         }
     }
 
-#ifdef UT_DISABLE_EXCEPTIONS
+#ifdef UT_NO_EXCEPTIONS
     void fail(Error::value_type error) const _ut_noexcept
     {
         fail(Error(std::move(error)));
@@ -777,7 +777,7 @@ Task<R> makeCompletedTask(Args&&... args)
     auto task = makeTask<R>();
     task.takePromise().complete(R(std::forward<Args>(args)...));
 
-#ifndef UT_DISABLE_EXCEPTIONS
+#ifndef UT_NO_EXCEPTIONS
     // Throw if move/copy constructor failed.
     if (task.hasError())
         rethrowException(task.error());
@@ -794,7 +794,7 @@ Task<R> makeFailedTask(Error error) _ut_noexcept
     return task;
 }
 
-#ifdef UT_DISABLE_EXCEPTIONS
+#ifdef UT_NO_EXCEPTIONS
 template <class R = void>
 Task<R> makeFailedTask(Error::value_type error)
 {

@@ -225,8 +225,7 @@ public:
     template <class U = R, ut::EnableIfVoid<U> = nullptr>
     void operator()(Args&&... args) const
     {
-        if(!mActionData)
-            throw std::logic_error("Trying to call a nil function");
+        assert(mActionData && "Trying to call a nil function");
 
         action()(std::forward<Args>(args)...);
     }
@@ -234,8 +233,7 @@ public:
     template <class U = R, ut::DisableIfVoid<U> = nullptr>
     R operator()(Args&&... args) const
     {
-        if(!mActionData)
-            throw std::logic_error("Trying to call a nil function");
+        assert(mActionData && "Trying to call a nil function");
 
         return action()(std::forward<Args>(args)...);
     }

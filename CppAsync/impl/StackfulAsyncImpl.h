@@ -18,7 +18,7 @@
 
 #include "Common.h"
 
-#ifndef UT_DISABLE_EXCEPTIONS
+#ifndef UT_NO_EXCEPTIONS
 
 #include "Assert.h"
 #include "../util/Cast.h"
@@ -475,4 +475,4 @@ namespace detail
 
 }
 
-#endif // UT_DISABLE_EXCEPTIONS
+#endif // UT_NO_EXCEPTIONS

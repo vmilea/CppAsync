@@ -101,7 +101,7 @@ namespace detail
 
                 auto coro = coroutine_handle_type::from_promise(this);
 
-#ifdef UT_DISABLE_EXCEPTIONS
+#ifdef UT_NO_EXCEPTIONS
                 coro.resume();
 #else
                 Error eptr;
@@ -218,7 +218,7 @@ namespace experimental
             return alloc;
         }
 
-#ifdef UT_DISABLE_EXCEPTIONS
+#ifdef UT_NO_EXCEPTIONS
         static ut::Task<R> get_return_object_on_allocation_failure() _ut_noexcept
         {
             ut::Task<R> task;
@@ -238,7 +238,7 @@ namespace ut
         ut_dcheck(awt.isValid() &&
             "Can't await invalid objects");
 
-#ifdef UT_DISABLE_EXCEPTIONS
+#ifdef UT_NO_EXCEPTIONS
         return awt.hasError()
             // Suspend and destroy coroutine, then store error in Task.
             ? false
@@ -262,7 +262,7 @@ namespace ut
             {
                 auto& taskPromise = task_promise_type::fromAwaitContext(this);
 
-#ifdef UT_DISABLE_EXCEPTIONS
+#ifdef UT_NO_EXCEPTIONS
                 if (resumer->hasError())
                     // Destroy coroutine, then store error in Task.
                     taskPromise.interruptCoroutine(std::move(resumer->error()));
@@ -279,7 +279,7 @@ namespace ut
 
         auto& taskPromise = coro.promise();
 
-#ifdef UT_DISABLE_EXCEPTIONS
+#ifdef UT_NO_EXCEPTIONS
         if (awt.hasError()) {
             // Destroy coroutine, then store error in Task.
             taskPromise.interruptCoroutine(std::move(awt.error()));

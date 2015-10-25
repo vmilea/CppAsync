@@ -84,7 +84,7 @@ public:
     ~ScopeGuard()
     {
         if (!mIsDismissed) {
-#ifdef UT_DISABLE_EXCEPTIONS
+#ifdef UT_NO_EXCEPTIONS
             mCleanup();
 #else
             try {

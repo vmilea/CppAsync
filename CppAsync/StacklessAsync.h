@@ -51,6 +51,14 @@ struct AsyncFrame;
     \
     _ut_multi_line_macro_end
 
+#define ut_return_error(error) \
+    _ut_multi_line_macro_begin \
+    \
+    _ut_coroState.promise->fail(error); \
+    return; \
+    \
+    _ut_multi_line_macro_end
+
 #define ut_try \
     ut_coro_try
 
@@ -196,10 +204,10 @@ auto startAsyncOf(std::allocator_arg_t, const Alloc& alloc, Args&&... frameArgs)
 
     awaiter_handle_type handle(alloc, std::forward<Args>(frameArgs)...);
 
-#ifdef UT_DISABLE_EXCEPTIONS
+#ifdef UT_NO_EXCEPTIONS
     if (handle == nullptr) {
         Task<result_type> task;
-        task.cancel();
+        task.takePromise();
         return task; // Return invalid task.
     }
 #endif

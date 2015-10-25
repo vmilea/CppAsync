@@ -20,7 +20,7 @@
 
 // No support for stackful coroutines if exceptions are banned. Wasting
 // address space in such restricted environments would be silly anyway.
-#ifndef UT_DISABLE_EXCEPTIONS
+#ifndef UT_NO_EXCEPTIONS
 
 #include "Coroutine.h"
 #include <exception>
@@ -268,4 +268,4 @@ namespace stackful
 
 }
 
-#endif // UT_DISABLE_EXCEPTIONS
+#endif // UT_NO_EXCEPTIONS

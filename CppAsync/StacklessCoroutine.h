@@ -200,15 +200,17 @@ public:
     {
         StacklessCoroutineStatus status = resume(arg);
 
+#ifndef UT_NO_EXCEPTIONS
         if (status.value == StacklessCoroutineStatus::SC_Done) {
             auto& loopbackException = detail::stackless::context::loopbackException();
 
             if (!isNil(loopbackException)) {
-                auto eptr = loopbackException;
+                auto eptr = std::move(loopbackException);
                 reset(loopbackException);
                 rethrowException(eptr);
             }
         }
+#endif
 
         return status;
     }
@@ -233,13 +235,17 @@ public:
             ut_assert(isNil(loopbackException)
                 || (loopback && (coroState.exceptionHandler() != 0)));
 
+#ifdef UT_NO_EXCEPTIONS
+            // Resume from last line or from exception handler.
+            detail::stackless::CoroutineFrameTraits<frame_type>::call(mFrame, arg);
+#else
             loopback = false;
-            _ut_try {
+            try {
                 // Resume from last line or from exception handler.
                 detail::stackless::CoroutineFrameTraits<frame_type>::call(mFrame, arg);
 
                 ut_assert(isNil(loopbackException));
-            } _ut_catch (...) {
+            } catch (...) {
                 ut_assert(!isDestructed);
                 ut_assert(coroState.lastLine() == 0);
                 ut_assert(coroState.lastValue == nullptr);
@@ -252,6 +258,7 @@ public:
                 if (coroState.exceptionHandler() != 0)
                     loopback = true;
             }
+#endif
         } while (loopback);
 
         if (isDestructed) {
@@ -286,7 +293,7 @@ Coroutine makeCoroutineOf(std::allocator_arg_t, const Alloc& alloc, Args&&... fr
     detail::stackless::CoroutineAllocHandle<CustomFrame, Alloc> handle(alloc,
         std::forward<Args>(frameArgs)...);
 
-#ifdef UT_DISABLE_EXCEPTIONS
+#ifdef UT_NO_EXCEPTIONS
         if (handle == nullptr)
             return Coroutine(); // Return invalid coroutine.
 #endif

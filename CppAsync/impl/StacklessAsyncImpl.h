@@ -23,7 +23,7 @@
 #include "../Task.h"
 #include "AwaitableOps.h"
 
-#ifdef UT_DISABLE_EXCEPTIONS
+#ifdef UT_NO_EXCEPTIONS
 
 #define _ut_check_for_error(awt) \
     if (ut::detail::awaitable::hasError(awt)) { \
@@ -37,7 +37,7 @@
     if (ut::detail::awaitable::hasError(awt)) \
         ut::rethrowException(ut::detail::awaitable::takeError(awt));
 
-#endif // UT_DISABLE_EXCEPTIONS
+#endif // UT_NO_EXCEPTIONS
 
 namespace ut {
 
@@ -234,7 +234,7 @@ namespace detail
                             break;
                         }
                     } else {
-#ifdef UT_DISABLE_EXCEPTIONS
+#ifdef UT_NO_EXCEPTIONS
                         ut_assert(false);
 #else
                         auto eptr = context::loopbackException();

@@ -123,7 +123,7 @@ public:
     {
         if (!(capacity > max_align_size && (capacity % max_align_size == 0))) {
             ut_dcheckf(false, "Capacity should be a multiple of max alignment (%d)",
-                (static_cast<int>)(max_align_size)); // safe cast
+                static_cast<int>(max_align_size)); // safe cast
         }
     }
 
@@ -187,8 +187,13 @@ private:
 
         size_t chunkSize = (size + max_align_size - 1) / max_align_size * max_align_size;
 
-        if (mPos + chunkSize > end())
+        if (mPos + chunkSize > end()) {
+#ifdef UT_NO_EXCEPTIONS
+            return nullptr;
+#else
             throw std::bad_alloc();
+#endif
+        }
 
         char *p = mPos;
         mPos += chunkSize;
@@ -199,6 +204,8 @@ private:
     {
         ut_dcheck(isValidPos(mPos) &&
             "ArenaAlloc has outlived arena");
+
+        ut_dcheck(p != nullptr);
 
         // Do nothing.
 

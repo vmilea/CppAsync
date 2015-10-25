@@ -117,10 +117,10 @@ namespace detail
 
         awaiter_handle_type handle(alloc, std::move(awts));
 
-#ifdef UT_DISABLE_EXCEPTIONS
+#ifdef UT_NO_EXCEPTIONS
         if (handle == nullptr) {
             Task<iterator_type> task;
-            task.cancel();
+            task.takePromise();
             return task; // Return invalid task.
         }
 #endif
@@ -261,10 +261,10 @@ namespace detail
 
         awaiter_handle_type handle(alloc, count, std::move(awts));
 
-#ifdef UT_DISABLE_EXCEPTIONS
+#ifdef UT_NO_EXCEPTIONS
         if (handle == nullptr) {
             Task<iterator_type> task;
-            task.cancel();
+            task.takePromise();
             return task; // Return invalid task.
         }
 #endif

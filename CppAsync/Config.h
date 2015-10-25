@@ -24,7 +24,7 @@
 /**
  * Uncomment to use library in environments where exceptions are prohibited.
  */
-// #define UT_DISABLE_EXCEPTIONS
+// #define UT_NO_EXCEPTIONS
 
 /**
  * Define error type when exceptions are disabled

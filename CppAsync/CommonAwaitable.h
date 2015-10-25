@@ -86,7 +86,7 @@ public:
 
     const R& get() const
     {
-#ifdef UT_DISABLE_EXCEPTIONS
+#ifdef UT_NO_EXCEPTIONS
         ut_dcheck(!hasError());
 #else
         if (hasError())
@@ -98,7 +98,7 @@ public:
 
     R& get()
     {
-#ifdef UT_DISABLE_EXCEPTIONS
+#ifdef UT_NO_EXCEPTIONS
         ut_dcheck(!hasError());
 #else
         if (hasError())
@@ -183,13 +183,17 @@ private:
         ut_assert(!isReady());
         ut_assert(isNil(mResult.a()));
 
-        _ut_try {
+#ifdef UT_NO_EXCEPTIONS
+        mResult.raw().emplaceBIntoA(std::forward<Args>(args)...);
+#else
+        try {
             mResult.raw().emplaceBIntoA(std::forward<Args>(args)...);
             return true;
-        } _ut_catch (...) {
+        } catch (...) {
             mResult.raw().assignIntoBlank(currentException());
             return false;
         }
+#endif
     }
 
     EitherData<Error, R> mResult;
@@ -232,7 +236,7 @@ public:
 
     void get() const
     {
-#ifdef UT_DISABLE_EXCEPTIONS
+#ifdef UT_NO_EXCEPTIONS
         ut_dcheck(!hasError());
 #else
         if (hasError())

@@ -124,16 +124,9 @@ protected:
 
     // ... other custom states
 
-#ifdef UT_DISABLE_EXCEPTIONS
-    AwaitableBase() _ut_noexcept
-        : mAwaiter(nullptr)
-        , mState(ST_Initial)
-        , mError(Error()) { }
-#else
     AwaitableBase() _ut_noexcept
         : mAwaiter(nullptr)
         , mState(ST_Initial) { }
-#endif
 
     const Error& castError() const _ut_noexcept
     {

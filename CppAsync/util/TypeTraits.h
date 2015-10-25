@@ -22,7 +22,7 @@
 
 namespace std {
 
-#ifndef UT_DISABLE_EXCEPTIONS
+#ifndef UT_NO_EXCEPTIONS
 
 // Workaround - MSVC 12.0 is missing throw() specifier for std::exception_ptr
 #if defined(_MSC_VER) && _MSC_VER < 1900
@@ -45,7 +45,7 @@ struct is_nothrow_move_assignable<exception_ptr>
 
 #endif
 
-#endif // UT_DISABLE_EXCEPTIONS
+#endif // UT_NO_EXCEPTIONS
 
 }
 
