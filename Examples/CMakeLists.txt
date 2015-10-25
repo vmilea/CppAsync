@@ -9,11 +9,11 @@ source_group ("Examples\\util" FILES ${_examples_util_cxx} ${_examples_util_h})
 set (_examples_all_cxx ${_examples_cxx} ${_examples_util_cxx})
 
 if (NOT (MINGW AND CMAKE_COMPILER_IS_GNUCXX))
-	add_precompiled_header (stdafx.h _examples_all_cxx)
+    add_precompiled_header (stdafx.h _examples_all_cxx)
 endif()
 
 add_executable (Examples
-	${_examples_cxx} ${_examples_h}
+    ${_examples_cxx} ${_examples_h}
     ${_examples_util_cxx} ${_examples_util_h})
 
 target_link_libraries (Examples ICppAsync)
