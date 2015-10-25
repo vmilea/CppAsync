@@ -28,33 +28,33 @@ namespace detail
 {
     template <class T, class Alloc,
         bool IsStatelessAllocator = std::is_empty<Alloc>::value>
-    class AllocElementData : private T
+    class AllocElementData
     {
     public:
         using data_allocator_type = RebindAlloc<Alloc, AllocElementData>;
 
         static AllocElementData& getByCore(T& core) _ut_noexcept
         {
-            return static_cast<AllocElementData&>(core); // safe cast
+            return reinterpret_cast<AllocElementData&>(core); // safe cast
         }
 
         template <class ...Args>
         AllocElementData(const Alloc& alloc, Args&&... args)
-            : T(std::forward<Args>(args)...)
+            : mCore(std::forward<Args>(args)...)
             , mAlloc(alloc)
         {
             // Expecting match even if fields are not standard-layout
-            ut_assert(this == &getByCore(core()));
+            ut_assert(this == &getByCore(mCore));
         }
 
         const T& core() const _ut_noexcept
         {
-            return *this;
+            return mCore;
         }
 
         T& core() _ut_noexcept
         {
-            return *this;
+            return mCore;
         }
 
         const data_allocator_type& allocator() const _ut_noexcept
@@ -63,6 +63,7 @@ namespace detail
         }
 
     private:
+        T mCore;
         data_allocator_type mAlloc;
     };
 
@@ -70,39 +71,41 @@ namespace detail
     template <class T, class Alloc>
     class AllocElementData<T, Alloc, true>
         : private RebindAlloc<Alloc, AllocElementData<T, Alloc, true>>
-        , private T
     {
     public:
         using data_allocator_type = RebindAlloc<Alloc, AllocElementData>;
 
         static AllocElementData& getByCore(T& core) _ut_noexcept
         {
-            return static_cast<AllocElementData&>(core); // safe cast
+            return reinterpret_cast<AllocElementData&>(core); // safe cast
         }
 
         template <class ...Args>
         AllocElementData(const Alloc& alloc, Args&&... args)
             : data_allocator_type(alloc)
-            , T(std::forward<Args>(args)...)
+            , mCore(std::forward<Args>(args)...)
         {
             // Expecting match even if fields are not standard-layout
-            ut_assert(this == &getByCore(core()));
+            ut_assert(this == &getByCore(mCore));
         }
 
         const T& core() const _ut_noexcept
         {
-            return *this;
+            return mCore;
         }
 
         T& core() _ut_noexcept
         {
-            return *this;
+            return mCore;
         }
 
         const data_allocator_type& allocator() const _ut_noexcept
         {
             return *this;
         }
+
+    private:
+        T mCore;
     };
 }
 
@@ -114,11 +117,9 @@ namespace detail
 template <class T, class Alloc>
 class AllocElementPtr
 {
-#ifndef _MSC_VER // MSVC doesn't optimize empty base class reliably
     static_assert(!std::is_empty<Alloc>::value
         || sizeof(T) == sizeof(detail::AllocElementData<T, Alloc, true>),
         "Empty base class optimization not being performed");
-#endif
 
 protected:
     using data_type = detail::AllocElementData<T, Alloc>;
@@ -145,7 +146,7 @@ public:
         data_allocator_type a(alloc);
         mData = data_allocator_traits::allocate(a, 1);
 
-#ifdef UT_DISABLE_EXCEPTIONS
+#ifdef UT_NO_EXCEPTIONS
         if (mData == nullptr) {
             // Construct nil ptr.
         } else {
