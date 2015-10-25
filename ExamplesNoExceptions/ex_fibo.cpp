@@ -87,7 +87,7 @@ void ex_fibo()
         int value = fibo.valueAs<int>();
 
         if (value < 0) {
-            printf("error: %d", value);
+            printf("error: %d\n", value);
             return;
         }
 

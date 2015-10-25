@@ -35,7 +35,7 @@ static const Example EXAMPLES[] =
 int main()
 {
     size_t numExamples = sizeof(EXAMPLES) / sizeof(Example);
-    size_t selected = 2;
+    size_t selected = 0;
 
     while (selected < 1 || numExamples < selected) {
         printf("Examples:\n\n");
