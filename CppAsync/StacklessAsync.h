@@ -230,9 +230,9 @@ auto startAsyncOf()
     return startAsyncOf<CustomFrame>(std::allocator_arg, std::allocator<char>());
 }
 
-template <class F, class Alloc,
+template <class Alloc = std::allocator<char>, class F,
     EnableIf<IsFunctor<Unqualified<F>>::value> = nullptr>
-auto startAsync(F&& f, const Alloc& alloc)
+auto startAsync(F&& f, const Alloc& alloc = Alloc())
     -> Task<typename detail::stackless::AsyncFunctionTraits<F>::result_type>
 {
     using result_type = typename detail::stackless::AsyncFunctionTraits<F>::result_type;
@@ -250,26 +250,12 @@ auto startAsync(F&& f, const Alloc& alloc)
     return startAsyncOf<Frame>(std::allocator_arg, alloc, std::move(f));
 }
 
-template <class F,
-    EnableIf<IsFunctor<Unqualified<F>>::value> = nullptr>
-auto startAsync(F&& f)
-    -> Task<typename detail::stackless::AsyncFunctionTraits<F>::result_type>
-{
-    return startAsync(std::forward<F>(f), std::allocator<char>());
-}
-
-template <class T, class R, class Alloc>
-Task<R> startAsync(T *object, void (T::*method)(AsyncCoroState<R>&), const Alloc& alloc)
+template <class Alloc = std::allocator<char>, class T, class R>
+Task<R> startAsync(T *object, void (T::*method)(AsyncCoroState<R>&), const Alloc& alloc = Alloc())
 {
     return startAsync([object, method](AsyncCoroState<R>& coroState) {
         (object->*method)(coroState);
     }, alloc);
-}
-
-template <class T, class R>
-Task<R> startAsync(T *object, void (T::*method)(AsyncCoroState<R>&))
-{
-    return startAsync(object, method, std::allocator<char>());
 }
 
 }

@@ -71,7 +71,8 @@ namespace stackful
     // Instance generators
     //
 
-    template <class StackAllocator, class F>
+    template <class F, class StackAllocator,
+        EnableIf<IsFunctor<Unqualified<F>>::value> = nullptr>
     auto startAsync(F&& f, BasicStackAllocator<StackAllocator> stackAllocator)
         -> Task<typename detail::stackful::AsyncFunctionTraits<F>::result_type>
     {
@@ -91,11 +92,28 @@ namespace stackful
         return task;
     }
 
-    template <class StackAllocator = FixedSizeStack, class F>
-    Task<FunctionResult<F>> startAsync(F&& f,
-        int stackSize = StackAllocator::traits_type::default_size())
+    template <class StackAllocator = FixedSizeStack, class F,
+        EnableIf<IsFunctor<Unqualified<F>>::value> = nullptr>
+    auto startAsync(F&& f, int stackSize = StackAllocator::traits_type::default_size())
+        -> Task<typename detail::stackful::AsyncFunctionTraits<F>::result_type>
     {
         return startAsync(std::forward<F>(f), StackAllocator(stackSize));
+    }
+
+    template <class T, class R, class StackAllocator>
+    Task<R> startAsync(T *object, R (T::*method)(),
+        BasicStackAllocator<StackAllocator> stackAllocator)
+    {
+        return startAsync([object, method]() -> R {
+            return (object->*method)();
+        }, std::move(stackAllocator));
+    }
+
+    template <class StackAllocator = FixedSizeStack, class T, class R>
+    Task<R> startAsync(T *object, R (T::*method)(),
+        int stackSize = StackAllocator::traits_type::default_size())
+    {
+        return startAsync(object, method, StackAllocator(stackSize));
     }
 
     //

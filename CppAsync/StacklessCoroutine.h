@@ -308,9 +308,9 @@ Coroutine makeCoroutineOf()
     return makeCoroutineOf<CustomFrame>(std::allocator_arg, std::allocator<char>());
 }
 
-template <class F, class Alloc,
+template <class Alloc = std::allocator<char>, class F,
     EnableIf<IsFunctor<Unqualified<F>>::value> = nullptr>
-Coroutine makeCoroutine(F&& f, const Alloc& alloc)
+Coroutine makeCoroutine(F&& f, const Alloc& alloc = Alloc())
 {
     static_assert(detail::stackless::CoroutineFunctionTraits<F>::valid, "");
 
@@ -327,25 +327,12 @@ Coroutine makeCoroutine(F&& f, const Alloc& alloc)
     return makeCoroutineOf<Frame>(std::allocator_arg, alloc, std::move(f));
 }
 
-template <class F,
-    EnableIf<IsFunctor<Unqualified<F>>::value> = nullptr>
-Coroutine makeCoroutine(F&& f)
-{
-    return makeCoroutine(std::forward<F>(f), std::allocator<char>());
-}
-
-template <class T, class Alloc>
-Coroutine makeCoroutine(T *object, void (T::*method)(CoroState&), const Alloc& alloc)
+template <class Alloc = std::allocator<char>, class T>
+Coroutine makeCoroutine(T *object, void (T::*method)(CoroState&), const Alloc& alloc = Alloc())
 {
     return makeCoroutine([object, method](CoroState& coroState) {
         (object->*method)(coroState);
     }, alloc);
-}
-
-template <class T>
-Coroutine makeCoroutine(T *object, void (T::*method)(CoroState&))
-{
-    return makeCoroutine(object, method, std::allocator<char>());
 }
 
 }

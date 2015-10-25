@@ -218,7 +218,8 @@ namespace stackful
     // Instance generators
     //
 
-    template <class F, class StackAllocator>
+    template <class F, class StackAllocator,
+        EnableIf<IsFunctor<Unqualified<F>>::value> = nullptr>
     Coroutine makeCoroutine(F&& f, BasicStackAllocator<StackAllocator> stackAllocator)
     {
         static_assert(std::is_rvalue_reference<F&&>::value,
@@ -227,10 +228,27 @@ namespace stackful
         return Coroutine::wrap(StackfulCoroutine(std::move(f), std::move(stackAllocator)));
     }
 
-    template <class StackAllocator = FixedSizeStack, class F>
+    template <class StackAllocator = FixedSizeStack, class F,
+        EnableIf<IsFunctor<Unqualified<F>>::value> = nullptr>
     Coroutine makeCoroutine(F&& f, int stackSize = StackAllocator::traits_type::default_size())
     {
         return makeCoroutine(std::forward<F>(f), StackAllocator(stackSize));
+    }
+
+    template <class T, class StackAllocator>
+    Coroutine makeCoroutine(T *object, void (T::*method)(),
+        BasicStackAllocator<StackAllocator> stackAllocator)
+    {
+        return makeCoroutine([object, method]() {
+            (object->*method)();
+        }, std::move(stackAllocator));
+    }
+
+    template <class StackAllocator = FixedSizeStack, class T>
+    Coroutine makeCoroutine(T *object, void (T::*method)(),
+        int stackSize = StackAllocator::traits_type::default_size())
+    {
+        return makeCoroutine(object, method, StackAllocator(stackSize));
     }
 
     //
