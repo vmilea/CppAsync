@@ -14,6 +14,8 @@
 * limitations under the License.
 */
 
+/** See: http://www.boost.org/doc/libs/develop/doc/html/boost_asio/example/cpp11/chat/ */
+
 #ifdef HAVE_BOOST
 
 #include "Common.h"
@@ -64,12 +66,12 @@ public:
 
     ut::AwaitableBase& task()
     {
-        return mTask;
+        return mMainTask;
     }
 
     void start()
     {
-        mTask = ut::startAsyncOf<MainFrame>(this);
+        mMainTask = ut::startAsync(this, &ClientSession::asyncMain);
     }
 
 private:
@@ -82,124 +84,93 @@ private:
         Context() : socket(sIo) { }
     };
 
-    struct MainFrame : ut::AsyncFrame<void>
+    void asyncMain(ut::AsyncCoroState<void>& coroState)
     {
-        MainFrame(ClientSession *thiz) : thiz(thiz) { }
+        ut::AwaitableBase *doneAwt = nullptr;
+        ut_begin_function(coroState);
 
-        void operator()()
-        {
-            ut::AwaitableBase *doneAwt = nullptr;
-            auto& ctx = thiz->mCtx;
-            ut_begin();
+        // Session begins with client introducing himself.
+        mReadTask = ut::asyncReadUntil(mCtx->socket, mCtx->buf, mCtx, std::string("\n"));
+        ut_await_(mReadTask);
+        std::getline(std::istream(&mCtx->buf), mNickname);
 
-            // Session begins with client introducing himself.
-            transferTask = ut::asyncReadUntil(ctx->socket, ctx->buf, ctx, std::string("\n"));
-            ut_await_(transferTask);
-            std::getline(std::istream(&ctx->buf), thiz->mNickname);
+        // Join room and notify everybody.
+        mRoom.add(this);
 
-            // Join room and notify everybody.
-            thiz->mRoom.add(thiz);
+        // Start reader & writer coroutines.
+        mReaderTask = ut::startAsync(this, &ClientSession::asyncReader);
+        mWriterTask = ut::startAsync(this, &ClientSession::asyncWriter);
 
-            // Start reader & writer coroutines.
-            readerTask = ut::startAsyncOf<ReaderFrame>(thiz);
-            writerTask = ut::startAsyncOf<WriterFrame>(thiz);
-
+        ut_try {
             // Suspend until /leave or exception.
-            ut_await_any_(doneAwt, readerTask, writerTask);
+            ut_await_any_(doneAwt, mReaderTask, mWriterTask);
 
-            ut_try {
-                // Suspend until /leave or exception.
-                ut_await_any_(doneAwt, readerTask, writerTask);
+            mRoom.remove(this);
+        } ut_catch (...) {
+            mRoom.remove(this);
+            throw;
+        }
 
-                thiz->mRoom.remove(thiz);
-            } ut_catch (...) {
-                thiz->mRoom.remove(thiz);
-                throw;
+        ut_end();
+    }
+
+    void asyncReader(ut::AsyncCoroState<void>& coroState)
+    {
+        std::string line;
+        ut_begin_function(coroState);
+
+        do {
+            // Suspend until a message has been read.
+            mReadTask = ut::asyncReadUntil(mCtx->socket, mCtx->buf, mCtx, std::string("\n"));
+            ut_await_(mReadTask);
+
+            std::getline(std::istream(&mCtx->buf), line);
+
+            if (line == "/leave")
+                break;
+            else
+                mRoom.broadcast(mNickname, line);
+        } while (true);
+
+        ut_end();
+    }
+
+    void asyncWriter(ut::AsyncCoroState<void>& coroState)
+    {
+        ut_begin_function(coroState);
+
+        do {
+            if (mMsgQueue.empty()) {
+                mEvtTask = ut::Task<void>();
+                mEvtMsgQueued = mEvtTask.takePromise().share();
+
+                // Suspend while the outbound queue is empty.
+                ut_await_(mEvtTask);
+            } else {
+                mCtx->msg = std::move(mMsgQueue.front());
+                mMsgQueue.pop_front();
+
+                // Suspend until message has been sent.
+                mWriteTask = ut::asyncWrite(mCtx->socket, asio::buffer(mCtx->msg), mCtx);
+                ut_await_(mWriteTask);
             }
+        } while (true);
 
-            ut_end();
-        }
-
-    private:
-        ClientSession *thiz;
-        ut::Task<size_t> transferTask;
-        ut::Task<void> readerTask;
-        ut::Task<void> writerTask;
-    };
-
-    struct ReaderFrame : ut::AsyncFrame<void>
-    {
-        ReaderFrame(ClientSession *thiz) : thiz(thiz) { }
-
-        void operator()()
-        {
-            std::string line;
-            auto& ctx = thiz->mCtx;
-            ut_begin();
-
-            do {
-                // Suspend until a message has been read.
-                transferTask = ut::asyncReadUntil(ctx->socket, ctx->buf, ctx, std::string("\n"));
-                ut_await_(transferTask);
-
-                std::getline(std::istream(&ctx->buf), line);
-
-                if (line == "/leave")
-                    break;
-                else
-                    thiz->mRoom.broadcast(thiz->mNickname, line);
-            } while (true);
-
-            ut_end();
-        }
-
-    private:
-        ClientSession *thiz;
-        ut::Task<size_t> transferTask;
-    };
-
-    struct WriterFrame : ut::AsyncFrame<void>
-    {
-        WriterFrame(ClientSession *thiz)
-            : thiz(thiz) { }
-
-        void operator()()
-        {
-            auto& ctx = thiz->mCtx;
-            ut_begin();
-
-            do {
-                if (thiz->mMsgQueue.empty()) {
-                    evtTask = ut::Task<void>();
-                    thiz->mEvtMsgQueued = evtTask.takePromise().share();
-
-                    // Suspend while the outbound queue is empty.
-                    ut_await_(evtTask);
-                } else {
-                    ctx->msg = std::move(thiz->mMsgQueue.front());
-                    thiz->mMsgQueue.pop_front();
-
-                    // Suspend until message has been sent.
-                    transferTask = ut::asyncWrite(ctx->socket, asio::buffer(ctx->msg), ctx);
-                    ut_await_(transferTask);
-                }
-            } while (true);
-
-            ut_end();
-        }
-
-    private:
-        ClientSession *thiz;
-        ut::Task<void> evtTask;
-        ut::Task<size_t> transferTask;
-    };
+        ut_end();
+    }
 
     ChatRoom& mRoom;
-    ut::ContextRef<Context> mCtx;
     std::string mNickname;
-    ut::Task<void> mTask;
     std::deque<Msg> mMsgQueue;
     ut::SharedPromise<void> mEvtMsgQueued;
+    ut::ContextRef<Context> mCtx;
+
+    ut::Task<void> mMainTask;
+    ut::Task<void> mReaderTask;
+    ut::Task<void> mWriterTask;
+    ut::Task<void> mEvtTask;
+    ut::Task<size_t> mReadTask;
+    ut::Task<size_t> mWriteTask;
 };
 
 // Specialization allows awaiting the termination of a ClientSession.
@@ -220,6 +191,7 @@ static ut::Task<void> asyncChatServer(uint16_t port)
         void operator()()
         {
             ut::AwaitableBase *doneTask = nullptr;
+            auto& session = ctx->session;
             ut_begin();
 
             ctx->acceptor.bind(tcp::endpoint(tcp::v4(), port));
@@ -276,15 +248,16 @@ static ut::Task<void> asyncChatServer(uint16_t port)
         struct Context
         {
             tcp::acceptor acceptor;
+            std::unique_ptr<ClientSession> session;
             session_list_type sessions;
 
             Context() : acceptor(sIo, tcp::v4()) { }
         };
 
         uint16_t port;
-        ut::ContextRef<Context> ctx;
         ChatRoom room;
-        std::unique_ptr<ClientSession> session;
+        ut::ContextRef<Context> ctx;
+
         ut::Task<void> acceptTask;
         ut::Task<typename session_list_type::iterator> sessionEndedTask;
     };

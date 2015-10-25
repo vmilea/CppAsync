@@ -14,6 +14,8 @@
 * limitations under the License.
 */
 
+/** See: http://www.boost.org/doc/libs/develop/doc/html/boost_asio/example/cpp11/chat/ */
+
 #pragma once
 
 #include "Common.h"

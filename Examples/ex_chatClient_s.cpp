@@ -14,6 +14,8 @@
 * limitations under the License.
 */
 
+/** See: http://www.boost.org/doc/libs/develop/doc/html/boost_asio/example/cpp11/chat/ */
+
 #ifdef HAVE_BOOST_CONTEXT
 
 #include "Common.h"
@@ -50,31 +52,12 @@ public:
 
     ut::AwaitableBase& task()
     {
-        return mTask;
+        return mMainTask;
     }
 
     void start()
     {
-        mTask = ut::stackful::startAsync([this]() {
-            // Suspend until connected to server.
-            ut::stackful::await_(
-                ut::asyncResolveAndConnect(mCtx->socket, mCtx, mQuery));
-
-            // Suspend until we've introduced self.
-            mCtx->msg = mNickname + "\n";
-            ut::stackful::await_(
-                ut::asyncWrite(mCtx->socket, asio::buffer(mCtx->msg), mCtx));
-
-            // Start input loop.
-            std::thread([this] { inputFunc(); }).detach();
-
-            // Start reader & writer coroutines.
-            auto readerTask = asyncReader();
-            auto writerTask = asyncWriter();
-
-            // Suspend until /leave or exception.
-            ut::stackful::awaitAny_(readerTask, writerTask);
-        });
+        mMainTask = ut::stackful::startAsync(this, &ChatClient::asyncMain);
     }
 
 private:
@@ -87,6 +70,66 @@ private:
 
         Context() : socket(sIo), resolver(sIo) { }
     };
+
+    void asyncMain()
+    {
+        // Suspend until connected to server.
+        ut::stackful::await_(
+            ut::asyncResolveAndConnect(mCtx->socket, mCtx, mQuery));
+
+        // Suspend until we've introduced self.
+        mCtx->msg = mNickname + "\n";
+        ut::stackful::await_(
+            ut::asyncWrite(mCtx->socket, asio::buffer(mCtx->msg), mCtx));
+
+        // Start input loop.
+        std::thread([this] { inputFunc(); }).detach();
+
+        // Start reader & writer coroutines.
+        auto readerTask = ut::stackful::startAsync(this, &ChatClient::asyncReader);
+        auto writerTask = ut::stackful::startAsync(this, &ChatClient::asyncWriter);
+
+        // Suspend until /leave or exception.
+        ut::stackful::awaitAny_(readerTask, writerTask);
+    }
+
+    void asyncReader()
+    {
+        do {
+            // Suspend until a message has been read.
+            ut::stackful::await_(
+                ut::asyncReadUntil(mCtx->socket, mCtx->buf, mCtx, std::string("\n")));
+
+            std::string line;
+            std::getline(std::istream(&mCtx->buf), line);
+
+            printf("-- %s\n", line.c_str());
+        } while (true);
+    }
+
+    void asyncWriter()
+    {
+        bool quit = false;
+        do {
+            if (mMsgQueue.empty()) {
+                ut::Task<void> evtTask;
+                mEvtMsgQueued = evtTask.takePromise().share();
+
+                // Suspend while the outbound queue is empty.
+                ut::stackful::await_(evtTask);
+            } else {
+                mCtx->msg = std::move(mMsgQueue.front());
+                mMsgQueue.pop_front();
+
+                // Suspend until message has been sent.
+                ut::stackful::await_(
+                    ut::asyncWrite(mCtx->socket, asio::buffer(mCtx->msg), mCtx));
+
+                if (mCtx->msg == "/leave\n")
+                    quit = true;
+            }
+        } while (!quit);
+    }
 
     void inputFunc()
     {
@@ -111,54 +154,13 @@ private:
         } while(true);
     }
 
-    ut::Task<void> asyncReader()
-    {
-        return ut::stackful::startAsync([this]() {
-            do {
-                // Suspend until a message has been read.
-                ut::stackful::await_(
-                    ut::asyncReadUntil(mCtx->socket, mCtx->buf, mCtx, std::string("\n")));
-
-                std::string line;
-                std::getline(std::istream(&mCtx->buf), line);
-
-                printf("-- %s\n", line.c_str());
-            } while (true);
-        });
-    }
-
-    ut::Task<void> asyncWriter()
-    {
-        return ut::stackful::startAsync([this]() {
-            bool quit = false;
-            do {
-                if (mMsgQueue.empty()) {
-                    ut::Task<void> task;
-                    mEvtMsgQueued = task.takePromise().share();
-
-                    // Suspend while the outbound queue is empty.
-                    ut::stackful::await_(task);
-                } else {
-                    mCtx->msg = std::move(mMsgQueue.front());
-                    mMsgQueue.pop_front();
-
-                    // Suspend until message has been sent.
-                    ut::stackful::await_(
-                        ut::asyncWrite(mCtx->socket, asio::buffer(mCtx->msg), mCtx));
-
-                    if (mCtx->msg == "/leave\n")
-                        quit = true;
-                }
-            } while (!quit);
-        });
-    }
-
     tcp::resolver::query mQuery;
     std::string mNickname;
-    ut::ContextRef<Context> mCtx;
-    ut::Task<void> mTask;
     std::deque<Msg> mMsgQueue;
     ut::SharedPromise<void> mEvtMsgQueued;
+    ut::ContextRef<Context> mCtx;
+
+    ut::Task<void> mMainTask;
 };
 
 }

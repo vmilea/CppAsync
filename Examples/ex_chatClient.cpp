@@ -14,6 +14,8 @@
 * limitations under the License.
 */
 
+/** See: http://www.boost.org/doc/libs/develop/doc/html/boost_asio/example/cpp11/chat/ */
+
 #ifdef HAVE_BOOST
 
 #include "Common.h"
@@ -50,12 +52,14 @@ public:
 
     ut::AwaitableBase& task()
     {
-        return mTask;
+        return mMainTask;
     }
 
     void start()
     {
-        mTask = ut::startAsyncOf<MainFrame>(this);
+        // Keep it simple by defining coroutine as a member function instead
+        // of a full blown AsyncFrame. ChatClient holds all persistent data.
+        mMainTask = ut::startAsync(this, &ChatClient::asyncMain);
     }
 
 private:
@@ -69,114 +73,77 @@ private:
         Context() : socket(sIo), resolver(sIo) { }
     };
 
-    struct MainFrame : ut::AsyncFrame<void>
+    void asyncMain(ut::AsyncCoroState<void>& coroState)
     {
-        MainFrame(ChatClient *thiz) : thiz(thiz) { }
+        ut::AwaitableBase *doneAwt = nullptr;
+        ut_begin_function(coroState);
 
-        void operator()()
-        {
-            ut::AwaitableBase *doneAwt = nullptr;
-            auto& ctx = thiz->mCtx;
-            ut_begin();
+        mConnectTask = ut::asyncResolveAndConnect(mCtx->socket, mCtx, mQuery);
+        // Suspend until connected to server.
+        ut_await_(mConnectTask);
 
-            connectTask = ut::asyncResolveAndConnect(ctx->socket, ctx, thiz->mQuery);
-            // Suspend until connected to server.
-            ut_await_(connectTask);
+        // Suspend until we've introduced self.
+        mCtx->msg = mNickname + "\n";
+        mWriteTask = ut::asyncWrite(mCtx->socket, asio::buffer(mCtx->msg), mCtx);
+        ut_await_(mWriteTask);
 
-            // Suspend until we've introduced self.
-            ctx->msg = thiz->mNickname + "\n";
-            transferTask = ut::asyncWrite(ctx->socket, asio::buffer(ctx->msg), ctx);
-            ut_await_(transferTask);
+        // Start input loop.
+        std::thread([this] { inputFunc(); }).detach();
 
-            // Start input loop.
-            std::thread([this] { thiz->inputFunc(); }).detach();
+        // Start reader & writer coroutines.
+        mReaderTask = ut::startAsync(this, &ChatClient::asyncReader);
+        mWriterTask = ut::startAsync(this, &ChatClient::asyncWriter);
 
-            // Start reader & writer coroutines.
-            readerTask = ut::startAsyncOf<ReaderFrame>(thiz);
-            writerTask = ut::startAsyncOf<WriterFrame>(thiz);
+        // Suspend until /leave or exception.
+        ut_await_any_(doneAwt, mReaderTask, mWriterTask);
 
-            // Suspend until /leave or exception.
-            ut_await_any_(doneAwt, readerTask, writerTask);
+        ut_end();
+    }
 
-            ut_end();
-        }
-
-    private:
-        ChatClient *thiz;
-        ut::Task<tcp::endpoint> connectTask;
-        ut::Task<size_t> transferTask;
-        ut::Task<void> readerTask;
-        ut::Task<void> writerTask;
-    };
-
-    struct ReaderFrame : ut::AsyncFrame<void>
+    void asyncReader(ut::AsyncCoroState<void>& coroState)
     {
-        ReaderFrame(ChatClient *thiz) : thiz(thiz) { }
+        std::string line;
+        ut_begin_function(coroState);
 
-        void operator()()
-        {
-            auto& ctx = thiz->mCtx;
-            ut_begin();
+        do {
+            // Suspend until a message has been read.
+            mReadTask = ut::asyncReadUntil(mCtx->socket, mCtx->buf, mCtx, std::string("\n"));
+            ut_await_(mReadTask);
 
-            do {
-                // Suspend until a message has been read.
-                transferTask = ut::asyncReadUntil(ctx->socket, ctx->buf, ctx, std::string("\n"));
-                ut_await_(transferTask);
+            std::getline(std::istream(&mCtx->buf), line);
 
-                {
-                    std::string line;
-                    std::getline(std::istream(&ctx->buf), line);
+            printf("-- %s\n", line.c_str());
+        } while (true);
 
-                    printf("-- %s\n", line.c_str());
-                }
-            } while (true);
+        ut_end();
+    }
 
-            ut_end();
-        }
-
-    private:
-        ChatClient *thiz;
-        ut::Task<size_t> transferTask;
-    };
-
-    struct WriterFrame : ut::AsyncFrame<void>
+    void asyncWriter(ut::AsyncCoroState<void>& coroState)
     {
-        WriterFrame(ChatClient *thiz)
-            : thiz(thiz) { }
+        ut_begin_function(coroState);
 
-        void operator()()
-        {
-            auto& ctx = thiz->mCtx;
-            ut_begin();
+        do {
+            if (mMsgQueue.empty()) {
+                mEvtTask = ut::Task<void>();
+                mEvtMsgQueued = mEvtTask.takePromise().share();
 
-            do {
-                if (thiz->mMsgQueue.empty()) {
-                    evtTask = ut::Task<void>();
-                    thiz->mEvtMsgQueued = evtTask.takePromise().share();
+                // Suspend while the outbound queue is empty.
+                ut_await_(mEvtTask);
+            } else {
+                mCtx->msg = std::move(mMsgQueue.front());
+                mMsgQueue.pop_front();
 
-                    // Suspend while the outbound queue is empty.
-                    ut_await_(evtTask);
-                } else {
-                    ctx->msg = std::move(thiz->mMsgQueue.front());
-                    thiz->mMsgQueue.pop_front();
+                // Suspend until message has been sent.
+                mWriteTask = ut::asyncWrite(mCtx->socket, asio::buffer(mCtx->msg), mCtx);
+                ut_await_(mWriteTask);
 
-                    // Suspend until message has been sent.
-                    transferTask = ut::asyncWrite(ctx->socket, asio::buffer(ctx->msg), ctx);
-                    ut_await_(transferTask);
+                if (mCtx->msg == "/leave\n")
+                    break;
+            }
+        } while (true);
 
-                    if (ctx->msg == "/leave\n")
-                        break;
-                }
-            } while (true);
-
-            ut_end();
-        }
-
-    private:
-        ChatClient *thiz;
-        ut::Task<void> evtTask;
-        ut::Task<size_t> transferTask;
-    };
+        ut_end();
+    }
 
     void inputFunc()
     {
@@ -203,10 +170,17 @@ private:
 
     tcp::resolver::query mQuery;
     std::string mNickname;
-    ut::ContextRef<Context> mCtx;
-    ut::Task<void> mTask;
     std::deque<Msg> mMsgQueue;
     ut::SharedPromise<void> mEvtMsgQueued;
+    ut::ContextRef<Context> mCtx;
+
+    ut::Task<void> mMainTask;
+    ut::Task<void> mReaderTask;
+    ut::Task<void> mWriterTask;
+    ut::Task<void> mEvtTask;
+    ut::Task<tcp::endpoint> mConnectTask;
+    ut::Task<size_t> mReadTask;
+    ut::Task<size_t> mWriteTask;
 };
 
 }

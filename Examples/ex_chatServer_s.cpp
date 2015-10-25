@@ -14,6 +14,8 @@
 * limitations under the License.
 */
 
+/** See: http://www.boost.org/doc/libs/develop/doc/html/boost_asio/example/cpp11/chat/ */
+
 #ifdef HAVE_BOOST_CONTEXT
 
 #include "Common.h"
@@ -65,28 +67,12 @@ public:
 
     ut::AwaitableBase& task()
     {
-        return mTask;
+        return mMainTask;
     }
 
     void start()
     {
-        mTask = ut::stackful::startAsync([this]() {
-            // Session begins with client introducing himself.
-            ut::stackful::await_(
-                ut::asyncReadUntil(mCtx->socket, mCtx->buf, mCtx, std::string("\n")));
-            std::getline(std::istream(&mCtx->buf), mNickname);
-
-            // Join room and notify everybody.
-            mRoom.add(this);
-            ut_scope_guard_([this] { mRoom.remove(this); });
-
-            // Start reader & writer coroutines.
-            auto readerTask = asyncReader();
-            auto writerTask = asyncWriter();
-
-            // Suspend until /leave or exception.
-            ut::stackful::awaitAny_(readerTask, writerTask);
-        });
+        mMainTask = ut::stackful::startAsync(this, &ClientSession::asyncMain);
     }
 
 private:
@@ -99,54 +85,70 @@ private:
         Context() : socket(sIo) { }
     };
 
-    ut::Task<void> asyncReader()
+    void asyncMain()
     {
-        return ut::stackful::startAsync([this]() {
-            bool quit = false;
-            do {
-                // Suspend until a message has been read.
-                ut::stackful::await_(
-                    ut::asyncReadUntil(mCtx->socket, mCtx->buf, mCtx, std::string("\n")));
+        // Session begins with client introducing himself.
+        ut::stackful::await_(
+            ut::asyncReadUntil(mCtx->socket, mCtx->buf, mCtx, std::string("\n")));
+        std::getline(std::istream(&mCtx->buf), mNickname);
 
-                std::string line;
-                std::getline(std::istream(&mCtx->buf), line);
+        // Join room and notify everybody.
+        mRoom.add(this);
+        ut_scope_guard_([this] { mRoom.remove(this); });
 
-                if (line == "/leave")
-                    quit = true;
-                else
-                    mRoom.broadcast(mNickname, line);
-            } while (!quit);
-        });
+        // Start reader & writer coroutines.
+        auto readerTask = ut::stackful::startAsync(this, &ClientSession::asyncReader);
+        auto writerTask = ut::stackful::startAsync(this, &ClientSession::asyncWriter);
+
+        // Suspend until /leave or exception.
+        ut::stackful::awaitAny_(readerTask, writerTask);
     }
 
-    ut::Task<void> asyncWriter()
+    void asyncReader()
     {
-        return ut::stackful::startAsync([this]() {
-            do {
-                if (mMsgQueue.empty()) {
-                    ut::Task<void> task;
-                    mEvtMsgQueued = task.takePromise().share();
+        bool quit = false;
+        do {
+            // Suspend until a message has been read.
+            ut::stackful::await_(
+                ut::asyncReadUntil(mCtx->socket, mCtx->buf, mCtx, std::string("\n")));
 
-                    // Suspend while the outbound queue is empty.
-                    ut::stackful::await_(task);
-                } else {
-                    mCtx->msg = std::move(mMsgQueue.front());
-                    mMsgQueue.pop_front();
+            std::string line;
+            std::getline(std::istream(&mCtx->buf), line);
 
-                    // Suspend until the message has been sent.
-                    ut::stackful::await_(
-                        ut::asyncWrite(mCtx->socket, asio::buffer(mCtx->msg), mCtx));
-                }
-            } while (true);
-        });
+            if (line == "/leave")
+                quit = true;
+            else
+                mRoom.broadcast(mNickname, line);
+        } while (!quit);
+    }
+
+    void asyncWriter()
+    {
+        do {
+            if (mMsgQueue.empty()) {
+                ut::Task<void> evtTask;
+                mEvtMsgQueued = evtTask.takePromise().share();
+
+                // Suspend while the outbound queue is empty.
+                ut::stackful::await_(evtTask);
+            } else {
+                mCtx->msg = std::move(mMsgQueue.front());
+                mMsgQueue.pop_front();
+
+                // Suspend until the message has been sent.
+                ut::stackful::await_(
+                    ut::asyncWrite(mCtx->socket, asio::buffer(mCtx->msg), mCtx));
+            }
+        } while (true);
     }
 
     ChatRoom& mRoom;
-    ut::ContextRef<Context> mCtx;
     std::string mNickname;
-    ut::Task<void> mTask;
     std::deque<Msg> mMsgQueue;
     ut::SharedPromise<void> mEvtMsgQueued;
+    ut::ContextRef<Context> mCtx;
+
+    ut::Task<void> mMainTask;
 };
 
 // Specialization allows awaiting the termination of a ClientSession.
