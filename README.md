@@ -29,7 +29,7 @@ Intuitively, coroutines are just functions that may be suspended and then resume
 
 This ability to yield to one another and be resumed, combined with ease of use and inherent efficiency, makes coroutines great for writing generators and coordinating async tasks.
 
-Languages like C#, Phython, JavaScript, Dart, and Lua already support coroutines in one form or another via `yield` or `async` / `await` operators. For C++ there is proposal [N4402](https://isocpp.org/files/papers/N4402.pdf)/[N4499](https://isocpp.org/files/papers/N4499.pdf) - Resumable Functions (a kind of stackless coroutines), which might become part of C++17. Here is where CppAsync comes in: it makes these constructs available to you right now in portable C++11, with an easy migration path to the baked-in version once it becomes supported by your target compilers.
+Languages like C#, Phython, JavaScript, Dart, and Lua already support coroutines in one form or another via `yield` or `async` / `await` operators. For C++ there is proposal [N4402](https://isocpp.org/files/papers/N4402.pdf)/[N4499](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4499.pdf) - Resumable Functions (a kind of stackless coroutines), which might become part of C++17. Here is where CppAsync comes in: it makes these constructs available to you right now in portable C++11, with an easy migration path to the baked-in version once it becomes supported by your target compilers.
 
 
 ## Overview
