@@ -26,7 +26,7 @@ static util::Looper sLooper;
 
 static ut::Task<void> asyncDelay(long milliseconds)
 {
-    auto task = ut::makeTask();
+    ut::Task<void> task;
     auto promise = task.takePromise().share();
 
     // Finish task after delay. Assuming scheduler can't fail.

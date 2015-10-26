@@ -30,7 +30,7 @@ static ut::Task<void> asyncDelay(long milliseconds)
     // Instead we manually create a task object, then schedule its
     // completion on the run loop.
 
-    auto task = ut::makeTask();
+    ut::Task<void> task;
     auto promise = task.takePromise().share();
 
     // Finish task after delay.

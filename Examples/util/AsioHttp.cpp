@@ -318,7 +318,7 @@ ut::Task<size_t> asyncHttpsDownload(asio::io_service& io, asio::streambuf& outBu
 ut::Task<void> asyncShutdown(asio::ssl::stream<asio::ip::tcp::socket>& socket,
     const ut::ContextRef<void>& ctx)
 {
-    auto task = ut::makeTask();
+    ut::Task<void> task;
     socket.async_shutdown(ut::makeAsioHandler(task, ctx));
     return task;
 }

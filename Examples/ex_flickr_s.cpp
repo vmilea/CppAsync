@@ -52,9 +52,6 @@ static ut::Task<void> asyncFlickrDownload(const std::vector<std::string>& tags,
     {
         asio::streambuf buf;
         ut::Task<size_t> task;
-
-        TransferSlot()
-            : task(ut::makeTask<size_t>()) { }
     };
 
     struct DownloadSlot : TransferSlot

@@ -70,7 +70,7 @@ ut::Task<void> asyncHandshake(asio::ssl::stream<asio::ip::tcp::socket>& socket,
     const ut::ContextRef<void>& ctx,
     Handshake type)
 {
-    auto task = ut::makeTask();
+    ut::Task<void> task;
     socket.async_handshake(type, ut::makeAsioHandler(task, ctx));
     return task;
 }

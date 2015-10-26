@@ -200,7 +200,7 @@ AsioHandler<R> makeAsioHandler(Task<R>& task, const ContextRef<RefT, Alloc>& ctx
 template <class Timer, class RefT, class Alloc>
 Task<void> asyncWait(Timer& timer, const ContextRef<RefT, Alloc>& ctx)
 {
-    auto task = makeTask();
+    Task<void> task;
     timer.async_wait(makeAsioHandler(task, ctx));
     return task;
 }
@@ -240,7 +240,7 @@ auto asyncResolve(Resolver& resolver, const ContextRef<RefT, Alloc>& ctx,
     const typename Resolver::query& query)
     -> Task<typename Resolver::iterator>
 {
-    auto task = makeTask<typename Resolver::iterator>();
+    Task<typename Resolver::iterator> task;
     resolver.async_resolve(query, makeAsioHandler(task, ctx));
     return task;
 }
@@ -249,7 +249,7 @@ template <class Socket, class RefT, class Alloc>
 Task<void> asyncConnect(Socket& socket, const ContextRef<RefT, Alloc>& ctx,
     const typename Socket::endpoint_type& endpoint)
 {
-    auto task = makeTask();
+    Task<void> task;
     socket.async_connect(endpoint, makeAsioHandler(task, ctx));
     return task;
 }
@@ -279,7 +279,7 @@ auto asyncResolveAndConnect(Socket& socket, const ContextRef<RefT, Alloc>& ctx,
 template <class Acceptor, class PeerSocket, class RefT, class Alloc>
 Task<void> asyncAccept(Acceptor& acceptor, PeerSocket& peer, const ContextRef<RefT, Alloc>& ctx)
 {
-    auto task = makeTask();
+    Task<void> task;
     acceptor.async_accept(peer, makeAsioHandler(task, ctx));
     return task;
 }
@@ -288,7 +288,7 @@ template <class Acceptor, class PeerSocket, class RefT, class Alloc>
 Task<void> asyncAccept(Acceptor& acceptor, PeerSocket& peer,
     typename Acceptor::endpoint_type& peerEndpoint, const ContextRef<RefT, Alloc>& ctx)
 {
-    auto task = makeTask();
+    Task<void> task;
     acceptor.async_accept(peer, peerEndpoint, makeAsioHandler(task, ctx));
     return task;
 }
@@ -299,7 +299,7 @@ Task<size_t> asyncWrite(AsyncWriteStream& stream,
     const ConstBufferSequence& buffers, const ContextRef<RefT, Alloc>& ctx,
     CompletionCondition completionCondition)
 {
-    auto task = makeTask<size_t>();
+    Task<size_t> task;
     asio::async_write(stream, buffers, completionCondition, makeAsioHandler(task, ctx));
     return task;
 }
@@ -317,7 +317,7 @@ Task<size_t> asyncWrite(AsyncWriteStream& stream,
     asio::basic_streambuf<BufferAlloc>& buffer, const ContextRef<RefT, Alloc>& ctx,
     CompletionCondition completionCondition)
 {
-    auto task = makeTask<size_t>();
+    Task<size_t> task;
     asio::async_write(stream, buffer, completionCondition, makeAsioHandler(task, ctx));
     return task;
 }
@@ -335,7 +335,7 @@ Task<size_t> asyncRead(AsyncReadStream& stream,
     const MutableBufferSequence& outBuffers, const ContextRef<RefT, Alloc>& ctx,
     CompletionCondition completionCondition)
 {
-    auto task = makeTask<size_t>();
+    Task<size_t> task;
     asio::async_read(stream, outBuffers, completionCondition, makeAsioHandler(task, ctx));
     return task;
 }
@@ -353,7 +353,7 @@ Task<size_t> asyncRead(AsyncReadStream& stream,
     asio::basic_streambuf<BufferAlloc>& outBuffer, const ContextRef<RefT, Alloc>& ctx,
     CompletionCondition completionCondition)
 {
-    auto task = makeTask<size_t>();
+    Task<size_t> task;
     asio::async_read(stream, outBuffer, completionCondition, makeAsioHandler(task, ctx));
     return task;
 }
@@ -370,7 +370,7 @@ Task<size_t> asyncReadUntil(AsyncReadStream& stream,
     asio::basic_streambuf<BufferAlloc>& outBuffer, const ContextRef<RefT, Alloc>& ctx,
     char delim)
 {
-    auto task = makeTask<size_t>();
+    Task<size_t> task;
     asio::async_read_until(stream, outBuffer, delim, makeAsioHandler(task, ctx));
     return task;
 }
@@ -380,7 +380,7 @@ Task<size_t> asyncReadUntil(AsyncReadStream& stream,
     asio::basic_streambuf<BufferAlloc>& outBuffer, const ContextRef<RefT, Alloc>& ctx,
     const std::string& delim)
 {
-    auto task = makeTask<size_t>();
+    Task<size_t> task;
     asio::async_read_until(stream, outBuffer, delim, makeAsioHandler(task, ctx));
     return task;
 }
@@ -390,7 +390,7 @@ Task<size_t> asyncReadUntil(AsyncReadStream& stream,
     asio::basic_streambuf<BufferAlloc>& outBuffer, const ContextRef<RefT, Alloc>& ctx,
     const boost::regex& expr)
 {
-    auto task = makeTask<size_t>();
+    Task<size_t> task;
     asio::async_read_until(stream, outBuffer, expr, makeAsioHandler(task, ctx));
     return task;
 }
@@ -401,7 +401,7 @@ Task<size_t> asyncReadUntil(AsyncReadStream& stream,
     asio::basic_streambuf<BufferAlloc>& outBuffer, const ContextRef<RefT, Alloc>& ctx,
     MatchCondition matchCondition)
 {
-    auto task = makeTask<size_t>();
+    Task<size_t> task;
     asio::async_read_until(stream, outBuffer, std::move(matchCondition),
         makeAsioHandler(task, ctx));
     return task;

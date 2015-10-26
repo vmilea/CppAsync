@@ -758,15 +758,9 @@ auto makeTaskWithListener(Args&&... args) _ut_noexcept
     return Task<result_type>(TypeInPlaceTag<L>(), std::forward<Args>(args)...);
 }
 
-template <class R = void>
-Task<R> makeTask() _ut_noexcept
-{
-    return makeTaskWithListener<detail::DefaultListener<R>>();
-}
-
 inline Task<void> makeCompletedTask() _ut_noexcept
 {
-    auto task = makeTask();
+    Task<void> task;
     task.takePromise().complete();
     return task;
 }
@@ -774,7 +768,7 @@ inline Task<void> makeCompletedTask() _ut_noexcept
 template <class R, class ...Args>
 Task<R> makeCompletedTask(Args&&... args)
 {
-    auto task = makeTask<R>();
+    Task<R> task;
     task.takePromise().complete(R(std::forward<Args>(args)...));
 
 #ifndef UT_NO_EXCEPTIONS
@@ -789,7 +783,7 @@ Task<R> makeCompletedTask(Args&&... args)
 template <class R = void>
 Task<R> makeFailedTask(Error error) _ut_noexcept
 {
-    auto task = makeTask<R>();
+    Task<R> task;
     task.takePromise().fail(std::move(error));
     return task;
 }
