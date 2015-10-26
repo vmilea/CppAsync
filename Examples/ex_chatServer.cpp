@@ -71,7 +71,22 @@ public:
 
     void start()
     {
-        mMainTask = ut::startAsync(this, &ClientSession::asyncMain);
+        struct Frame : ut::AsyncFrame<void>
+        {
+            Frame(ClientSession *thiz) : thiz(thiz) { }
+
+            // Make sure socket gets closed after task completes / fails.
+            ~Frame() { thiz->close(); }
+
+            // This Frame is just a proxy. ClientSession holds the actual
+            // coroutine function and persisted data.
+            void operator()() { thiz->asyncMain(coroState()); }
+
+        private:
+            ClientSession *thiz;
+        };
+
+        mMainTask = ut::startAsyncOf<Frame>(this);
     }
 
 private:
@@ -84,6 +99,8 @@ private:
         Context() : socket(sIo) { }
     };
 
+    // Coroutine body may be defined in a separate function. Here a member
+    // function of ClientSession is used for easier access.
     void asyncMain(ut::AsyncCoroState<void>& coroState)
     {
         ut::AwaitableBase *doneAwt = nullptr;
@@ -97,7 +114,8 @@ private:
         // Join room and notify everybody.
         mRoom.add(this);
 
-        // Start reader & writer coroutines.
+        // Start reader & writer coroutines. Library generates a proxy Frame
+        // that will invoke the given method of target object.
         mReaderTask = ut::startAsync(this, &ClientSession::asyncReader);
         mWriterTask = ut::startAsync(this, &ClientSession::asyncWriter);
 
@@ -157,6 +175,16 @@ private:
         } while (true);
 
         ut_end();
+    }
+
+    void close()
+    {
+        try {
+            mCtx->socket.shutdown(tcp::socket::shutdown_both);
+            mCtx->socket.close();
+        } catch (...) {
+            fprintf(stderr, "failed to close socket!\n");
+        }
     }
 
     ChatRoom& mRoom;

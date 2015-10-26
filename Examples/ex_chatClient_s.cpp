@@ -22,6 +22,7 @@
 #include "util/IO.h"
 #include <CppAsync/AsioWrappers.h>
 #include <CppAsync/StackfulAsync.h>
+#include <CppAsync/util/ScopeGuard.h>
 #include <CppAsync/util/StringUtil.h>
 #include <cstdio>
 #include <chrono>
@@ -57,6 +58,8 @@ public:
 
     void start()
     {
+        // Start the main coroutine. Library generates a proxy Frame that
+        // will invoke the given method of target object.
         mMainTask = ut::stackful::startAsync(this, &ChatClient::asyncMain);
     }
 
@@ -71,8 +74,13 @@ private:
         Context() : socket(sIo), resolver(sIo) { }
     };
 
+    // Coroutine body may be defined in a separate function. Here a member
+    // function of ChatClient is used for easier access.
     void asyncMain()
     {
+        // Make sure socket gets closed.
+        ut_scope_guard_([this] { close(); });
+
         // Suspend until connected to server.
         ut::stackful::await_(
             ut::asyncResolveAndConnect(mCtx->socket, mCtx, mQuery));
@@ -152,6 +160,16 @@ private:
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
             printf (" > ");
         } while(true);
+    }
+
+    void close()
+    {
+        try {
+            mCtx->socket.shutdown(tcp::socket::shutdown_both);
+            mCtx->socket.close();
+        } catch (...) {
+            fprintf(stderr, "failed to close socket!\n");
+        }
     }
 
     tcp::resolver::query mQuery;

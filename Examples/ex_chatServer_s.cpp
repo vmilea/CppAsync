@@ -72,6 +72,8 @@ public:
 
     void start()
     {
+        // Start the main coroutine. Library generates a proxy Frame that
+        // will invoke the given method of target object.
         mMainTask = ut::stackful::startAsync(this, &ClientSession::asyncMain);
     }
 
@@ -85,8 +87,13 @@ private:
         Context() : socket(sIo) { }
     };
 
+    // Coroutine body may be defined in a separate function. Here a member
+    // function of ClientSession is used for easier access.
     void asyncMain()
     {
+        // Make sure socket gets closed.
+        ut_scope_guard_([this] { close(); });
+
         // Session begins with client introducing himself.
         ut::stackful::await_(
             ut::asyncReadUntil(mCtx->socket, mCtx->buf, mCtx, std::string("\n")));
@@ -140,6 +147,16 @@ private:
                     ut::asyncWrite(mCtx->socket, asio::buffer(mCtx->msg), mCtx));
             }
         } while (true);
+    }
+
+    void close()
+    {
+        try {
+            mCtx->socket.shutdown(tcp::socket::shutdown_both);
+            mCtx->socket.close();
+        } catch (...) {
+            fprintf(stderr, "failed to close socket!\n");
+        }
     }
 
     ChatRoom& mRoom;

@@ -57,9 +57,22 @@ public:
 
     void start()
     {
-        // Keep it simple by defining coroutine as a member function instead
-        // of a full blown AsyncFrame. ChatClient holds all persistent data.
-        mMainTask = ut::startAsync(this, &ChatClient::asyncMain);
+        struct Frame : ut::AsyncFrame<void>
+        {
+            Frame(ChatClient *thiz) : thiz(thiz) { }
+
+            // Make sure socket gets closed after task completes / fails.
+            ~Frame() { thiz->close(); }
+
+            // This Frame is just a proxy. ChatClient holds the actual
+            // coroutine function and persisted data.
+            void operator()() { thiz->asyncMain(coroState()); }
+
+        private:
+            ChatClient *thiz;
+        };
+
+        mMainTask = ut::startAsyncOf<Frame>(this);
     }
 
 private:
@@ -73,6 +86,8 @@ private:
         Context() : socket(sIo), resolver(sIo) { }
     };
 
+    // Coroutine body may be defined in a separate function. Here a member
+    // function of ChatClient is used for easier access.
     void asyncMain(ut::AsyncCoroState<void>& coroState)
     {
         ut::AwaitableBase *doneAwt = nullptr;
@@ -90,7 +105,8 @@ private:
         // Start input loop.
         std::thread([this] { inputFunc(); }).detach();
 
-        // Start reader & writer coroutines.
+        // Start reader & writer coroutines. Library generates a proxy Frame
+        // that will invoke the given method of target object.
         mReaderTask = ut::startAsync(this, &ChatClient::asyncReader);
         mWriterTask = ut::startAsync(this, &ChatClient::asyncWriter);
 
@@ -166,6 +182,16 @@ private:
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
             printf (" > ");
         } while(true);
+    }
+
+    void close()
+    {
+        try {
+            mCtx->socket.shutdown(tcp::socket::shutdown_both);
+            mCtx->socket.close();
+        } catch (...) {
+            fprintf(stderr, "failed to close socket!\n");
+        }
     }
 
     tcp::resolver::query mQuery;
