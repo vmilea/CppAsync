@@ -168,8 +168,6 @@ public:
 
     bool isRunning() const _ut_noexcept
     {
-        ut_dcheck(this->isValid());
-
         return hasPromise();
     }
 
@@ -188,10 +186,10 @@ public:
 
     void detach() _ut_noexcept
     {
-        ut_dcheck(this->isValid() && hasPromise());
+        ut_dcheck(this->isValid());
+        ut_dcheck(hasPromise());
 
         promise()->mState = Promise<R>::ST_OpRunningDetached;
-
         CommonAwaitable<R>::reset(AwaitableBase::ST_Initial);
 
         if (mListener) {
@@ -203,10 +201,10 @@ public:
 
     void cancel() _ut_noexcept
     {
-        ut_assert(this->isValid() && hasPromise());
+        ut_dcheck(this->isValid());
+        ut_dcheck(hasPromise());
 
         promise()->mState = Promise<R>::ST_OpCanceled;
-
         CommonAwaitable<R>::reset(CommonAwaitable<R>::ST_Canceled);
 
         mListener.reset();
