@@ -29,7 +29,7 @@ namespace ut {
 // String utilities
 //
 
-#if defined(_MSC_VER) && _MSC_VER < 1900
+#ifdef _MSC_VER
 
 # define snprintf c99_snprintf
 # define vsnprintf c99_vsnprintf
