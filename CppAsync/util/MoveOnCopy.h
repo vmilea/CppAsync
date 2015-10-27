@@ -22,7 +22,7 @@
 
 namespace ut {
 
-template <typename T>
+template <class T>
 class UncheckedMoveOnCopy
 {
 public:
@@ -78,7 +78,7 @@ private:
     T mValue;
 };
 
-template <typename T>
+template <class T>
 class CheckedMoveOnCopy
 {
 public:
@@ -160,9 +160,9 @@ public:
 private:
     T mValue;
     bool mIsNil;
-}; 
+};
 
-template <typename T>
+template <class T>
 UncheckedMoveOnCopy<Unqualified<T>> makeUncheckedMoveOnCopy(T&& value)
 {
     static_assert(std::is_rvalue_reference<T&&>::value,
@@ -171,7 +171,7 @@ UncheckedMoveOnCopy<Unqualified<T>> makeUncheckedMoveOnCopy(T&& value)
     return UncheckedMoveOnCopy<RemoveReference<T>>(std::move(value));
 }
 
-template <typename T>
+template <class T>
 CheckedMoveOnCopy<Unqualified<T>> makeCheckedMoveOnCopy(T&& value)
 {
     static_assert(std::is_rvalue_reference<T&&>::value,
@@ -182,19 +182,25 @@ CheckedMoveOnCopy<Unqualified<T>> makeCheckedMoveOnCopy(T&& value)
 
 #ifdef NDEBUG
 
-template <typename T>
+template <class T>
 UncheckedMoveOnCopy<Unqualified<T>> makeMoveOnCopy(T&& value)
 {
     return makeUncheckedMoveOnCopy(std::forward<T>(value));
 }
 
+template <class T>
+using DefaultMoveOnCopy = UncheckedMoveOnCopy<T>;
+
 #else
 
-template <typename T>
+template <class T>
 CheckedMoveOnCopy<Unqualified<T>> makeMoveOnCopy(T&& value)
 {
     return makeCheckedMoveOnCopy(std::forward<T>(value));
 }
+
+template <class T>
+using DefaultMoveOnCopy = CheckedMoveOnCopy<T>;
 
 #endif // NDEBUG
 
