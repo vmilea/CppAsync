@@ -73,9 +73,9 @@ endif()
 #
 
 if (CMAKE_COMPILER_IS_GNUCXX)
-    add_definitions (-std=c++11 -fstrict-aliasing -Wstrict-aliasing -Wno-unused-parameter -Wno-deprecated-declarations)
+    add_definitions (-std=c++11 -fstrict-aliasing -Wstrict-aliasing)
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    add_definitions (-std=c++11 -fstrict-aliasing -Wstrict-aliasing -Wno-unused-parameter)
+    add_definitions (-std=c++11 -fstrict-aliasing -Wstrict-aliasing)
 elseif (MSVC)
     add_definitions (/wd4100 /wd4127 /wd4913)
 
