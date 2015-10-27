@@ -185,6 +185,7 @@ private:
 
 #ifdef UT_NO_EXCEPTIONS
         mResult.raw().emplaceBIntoA(std::forward<Args>(args)...);
+        return true;
 #else
         try {
             mResult.raw().emplaceBIntoA(std::forward<Args>(args)...);

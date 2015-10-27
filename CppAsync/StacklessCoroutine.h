@@ -221,8 +221,9 @@ public:
             "Can't resume a coroutine after it has finished");
 
         auto& loopbackException = detail::stackless::context::loopbackException();
-        auto& coroState = mFrame.coroState();
+        (void) loopbackException;
 
+        auto& coroState = mFrame.coroState();
         coroState.lastValue = nullptr;
 
         bool isDestructed = false;
