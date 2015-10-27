@@ -126,7 +126,7 @@ namespace detail
 
 template <class Clock = std::chrono::steady_clock, class U, class Alloc>
 Task<void> asyncWait(boost::asio::io_service& io, const typename Clock::duration& delay,
-    const ContextRef<U, Alloc>& ctx = ContextRef<U, Alloc>())
+    const ContextRef<U, Alloc>& ctx)
 {
     using timer_type = boost::asio::basic_waitable_timer<Clock>;
 
@@ -139,9 +139,15 @@ Task<void> asyncWait(boost::asio::io_service& io, const typename Clock::duration
     return task;
 }
 
+template <class Clock = std::chrono::steady_clock>
+Task<void> asyncWait(boost::asio::io_service& io, const typename Clock::duration& delay)
+{
+    return asyncWait(io, delay, ContextRef<void>());
+}
+
 template <class Clock = std::chrono::steady_clock, class U, class Alloc>
 Task<void> asyncWaitUntil(boost::asio::io_service& io, const typename Clock::time_point& timePoint,
-    const ContextRef<U, Alloc>& ctx = ContextRef<U, Alloc>())
+    const ContextRef<U, Alloc>& ctx)
 {
     using timer_type = boost::asio::basic_waitable_timer<Clock>;
 
@@ -152,6 +158,12 @@ Task<void> asyncWaitUntil(boost::asio::io_service& io, const typename Clock::tim
     // Timers depend only on io_service, no need to reference context.
     timer.async_wait(makeHandler(task));
     return task;
+}
+
+template <class Clock = std::chrono::steady_clock>
+Task<void> asyncWaitUntil(boost::asio::io_service& io, const typename Clock::time_point& timePoint)
+{
+    return asyncWaitUntil(io, timePoint, ContextRef<void>());
 }
 
 template <class Socket, class U, class Alloc>
