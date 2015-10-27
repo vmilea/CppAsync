@@ -53,14 +53,14 @@ public:
         return mSize == capacity;
     }
 
-    size_t size() const _ut_noexcept
+    std::size_t size() const _ut_noexcept
     {
         return mSize;
     }
 
     bool contains(const T& value) const
     {
-        for (size_t i = 0; i < mSize; i++) {
+        for (std::size_t i = 0; i < mSize; i++) {
             if (data(i) == value)
                 return true;
         }
@@ -121,18 +121,18 @@ private:
     StaticStack(const StaticStack& other) = delete;
     StaticStack& operator=(const StaticStack& other) = delete;
 
-    const T& data(size_t index) const _ut_noexcept
+    const T& data(std::size_t index) const _ut_noexcept
     {
         return ptrCast<const T*>(&mData)[index]; // safe cast
     }
 
-    T& data(size_t index) _ut_noexcept
+    T& data(std::size_t index) _ut_noexcept
     {
         return ptrCast<T*>(&mData)[index]; // safe cast
     }
 
     AlignedStorage<Capacity * sizeof(T), std::alignment_of<T>::value> mData;
-    size_t mSize;
+    std::size_t mSize;
 };
 
 template <class T, int Capacity>
@@ -156,14 +156,14 @@ public:
         return mSize == capacity;
     }
 
-    size_t size() const _ut_noexcept
+    std::size_t size() const _ut_noexcept
     {
         return mSize;
     }
 
     bool contains(const T& value) const _ut_noexcept
     {
-        for (size_t i = 0; i < mSize; i++) {
+        for (std::size_t i = 0; i < mSize; i++) {
             if (mData[i] == value)
                 return true;
         }
@@ -211,7 +211,7 @@ private:
     StaticStack& operator=(const StaticStack& other) = delete;
 
     T mData[Capacity];
-    size_t mSize;
+    std::size_t mSize;
 };
 
 }

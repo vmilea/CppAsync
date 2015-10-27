@@ -60,12 +60,12 @@ public:
         return *mArena;
     }
 
-    T* allocate(size_t n)
+    T* allocate(std::size_t n)
     {
         return mArena->template allocate<T>(n);
     }
 
-    void deallocate(T* p, size_t n) _ut_noexcept
+    void deallocate(T* p, std::size_t n) _ut_noexcept
     {
         mArena->template deallocate<T>(p, n);
     }
@@ -116,7 +116,7 @@ ArenaAlloc<T, Arena> makeArenaAlloc(Arena& arena) _ut_noexcept
 class BufferArenaBase
 {
 public:
-    BufferArenaBase(char *buf, size_t capacity) _ut_noexcept
+    BufferArenaBase(char *buf, std::size_t capacity) _ut_noexcept
         : mBuf(buf)
         , mPos(buf)
         , mCapacity(capacity)
@@ -132,14 +132,14 @@ public:
         mPos = nullptr;
     }
 
-    size_t capacity() _ut_noexcept
+    std::size_t capacity() _ut_noexcept
     {
         return mCapacity;
     }
 
-    size_t used() _ut_noexcept
+    std::size_t used() _ut_noexcept
     {
-        return static_cast<size_t>(mPos - mBuf); // safe cast
+        return static_cast<std::size_t>(mPos - mBuf); // safe cast
     }
 
 private:
@@ -158,34 +158,34 @@ protected:
     }
 
     char *mBuf, *mPos;
-    size_t mCapacity;
+    std::size_t mCapacity;
 };
 
 class LinearBufferArena : public BufferArenaBase
 {
 public:
-    LinearBufferArena(char *buf, size_t capacity) _ut_noexcept
+    LinearBufferArena(char *buf, std::size_t capacity) _ut_noexcept
         : BufferArenaBase(buf, capacity) { }
 
     template <class T>
-    T* allocate(size_t n)
+    T* allocate(std::size_t n)
     {
         return static_cast<T*>(allocateImpl(n * sizeof(T))); // safe cast
     }
 
     template <class T>
-    void deallocate(T* p, size_t n)
+    void deallocate(T* p, std::size_t n)
     {
         deallocateImpl(p, n * sizeof(T));
     }
 
 private:
-    void* allocateImpl(size_t size)
+    void* allocateImpl(std::size_t size)
     {
         ut_dcheck(isValidPos(mPos) &&
             "ArenaAlloc has outlived arena");
 
-        size_t chunkSize = (size + max_align_size - 1) / max_align_size * max_align_size;
+        std::size_t chunkSize = (size + max_align_size - 1) / max_align_size * max_align_size;
 
         if (mPos + chunkSize > end()) {
 #ifdef UT_NO_EXCEPTIONS
@@ -200,7 +200,7 @@ private:
         return p;
     }
 
-    void deallocateImpl(void *p, size_t size) _ut_noexcept
+    void deallocateImpl(void *p, std::size_t size) _ut_noexcept
     {
         ut_dcheck(isValidPos(mPos) &&
             "ArenaAlloc has outlived arena");
@@ -209,7 +209,7 @@ private:
 
         // Do nothing.
 
-        //size_t chunkSize = (size + max_align_size - 1) / max_align_size * max_align_size;
+        //std::size_t chunkSize = (size + max_align_size - 1) / max_align_size * max_align_size;
         //
         //if (static_cast<char*>(p) + chunkSize == mPos) // safe cast
         //    mPos = static_cast<char*>(p); // safe cast
@@ -220,11 +220,11 @@ private:
 // StackArena
 //
 
-template <size_t N>
+template <std::size_t N>
 class LinearStackArena : public LinearBufferArena
 {
 public:
-    static const size_t buffer_capacity = (N + max_align_size - 1) /
+    static const std::size_t buffer_capacity = (N + max_align_size - 1) /
             max_align_size * max_align_size; // round up
 
     LinearStackArena() _ut_noexcept

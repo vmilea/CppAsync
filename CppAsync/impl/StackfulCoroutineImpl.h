@@ -57,7 +57,7 @@ namespace detail
 
             inline void initialize();
 
-            inline size_t callChainSize() _ut_noexcept
+            inline std::size_t callChainSize() _ut_noexcept
             {
                 return impl::callChain().size();
             }
@@ -97,16 +97,19 @@ namespace detail
                 "Expecting an unqualified type");
 
             static_assert(IsFunctor<F>::value,
-                "Expected signature of stackful coroutine function: void f() or void f(void *initialValue)");
+                "Expected signature of stackful coroutine function: "
+                "void f() or void f(void *initialValue)");
 
             static_assert(FunctionHasArityLessThan2<F>::value,
-                "Expected signature of stackful coroutine function: void f() or void f(void *initialValue)");
+                "Expected signature of stackful coroutine function: "
+                "void f() or void f(void *initialValue)");
 
             template <class T, EnableIf<FunctionIsUnary<T>::value> = nullptr>
             static void call(T& f, void *arg)
             {
                 static_assert(std::is_same<void *, FunctionArg<F, 0>>::value,
-                    "Expected signature of stackful coroutine function: void f() or void f(void *initialValue)");
+                    "Expected signature of stackful coroutine function: "
+                    "void f() or void f(void *initialValue)");
 
                 f(arg);
             }
@@ -132,7 +135,7 @@ namespace detail
                 , mValue(nullptr)
                 , mFContext(boost::context::fcontext_t()) { }
 
-            CoroutineImplBase(void *sp, size_t size) _ut_noexcept
+            CoroutineImplBase(void *sp, std::size_t size) _ut_noexcept
                 : CoroutineImplBase()
             {
                 mFContext = boost::context::make_fcontext(sp, size, &fcontextFunc);
@@ -372,14 +375,17 @@ namespace detail
         {
         public:
             template <class U>
-            CoroutineImpl(U&& f, StackAllocator stackAllocator, boost::context::stack_context stackContext, void *sp, size_t size) _ut_noexcept
+            CoroutineImpl(U&& f, StackAllocator stackAllocator,
+                boost::context::stack_context stackContext,
+                void *sp, std::size_t size) _ut_noexcept
                 : CoroutineImplBase(sp, size)
                 , mF(std::forward<U>(f))
                 , mStackAllocator(std::move(stackAllocator))
                 , mStackContext(stackContext)
             {
                 static_assert(IsNoThrowCopyable<StackAllocator>::value,
-                    "StackAllocator should be no-throw copyable. Consider adding noexcept or throw() specifier");
+                    "StackAllocator should be no-throw copyable. "
+                    "Consider adding noexcept or throw() specifier");
 
                 static_assert(IsNoThrowCopyable<boost::context::stack_context>::value,
                     "Expecting boost::context::stack_context to be no-throw copyable");

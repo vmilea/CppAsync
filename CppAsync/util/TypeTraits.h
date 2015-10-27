@@ -132,13 +132,13 @@ using RemoveAllExtents = typename std::remove_all_extents<T>::type;
 
 // Type aliases (misc)
 
-template<size_t Len, size_t Align>
+template<std::size_t Len, std::size_t Align>
 using AlignedStorage = typename std::aligned_storage<Len, Align>::type;
 
-template<size_t Len>
+template<std::size_t Len>
 using MaxAlignedStorage = typename std::aligned_storage<Len, max_align_size>::type;
 
-// template<size_t Len, class ...Types>
+// template<std::size_t Len, class ...Types>
 // using AlignedUnion = typename std::aligned_union<Len, Types...>::type;
 
 template<class T>

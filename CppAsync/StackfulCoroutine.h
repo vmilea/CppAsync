@@ -71,10 +71,10 @@ namespace stackful
             auto stackContext = stackAllocator.allocate();
 
             // Round up to a multiple of max alignment.
-            static const size_t implSize = RoundUp<sizeof(impl_type), max_align_size>::value;
+            static const std::size_t implSize = RoundUp<sizeof(impl_type), max_align_size>::value;
 
             char *sp = static_cast<char*>(stackContext.sp) - implSize; // safe cast
-            size_t size = stackContext.size - implSize;
+            std::size_t size = stackContext.size - implSize;
 
             // Emplace header at the beginning of stack.
             mCoroutine = new (sp) impl_type(
@@ -165,12 +165,12 @@ namespace stackful
 
     struct StackTraits
     {
-        static size_t minimumSize() _ut_noexcept
+        static std::size_t minimumSize() _ut_noexcept
         {
             return boost::context::stack_traits::minimum_size();
         }
 
-        static size_t defaultSize() _ut_noexcept
+        static std::size_t defaultSize() _ut_noexcept
         {
             return boost::context::stack_traits::default_size();
         }
@@ -186,7 +186,7 @@ namespace stackful
     public:
         using traits_type = typename T::traits_type;
 
-        BasicStackAllocator(size_t size = traits_type::default_size()) _ut_noexcept
+        BasicStackAllocator(std::size_t size = traits_type::default_size()) _ut_noexcept
             : mCore(size) { }
 
         boost::context::stack_context allocate()

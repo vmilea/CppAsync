@@ -30,7 +30,7 @@ namespace util { namespace asio {
 namespace detail
 {
     template <class Socket>
-    struct HttpGetFrame : ut::AsyncFrame<size_t>
+    struct HttpGetFrame : ut::AsyncFrame<std::size_t>
     {
         HttpGetFrame(Socket& socket, streambuf& outBuf,
             const std::string& host, const std::string& path,
@@ -100,13 +100,13 @@ namespace detail
                     if (boost::starts_with(header, "Content-Length: ")) {
                         auto l = header.substr(strlen("Content-Length: "));
                         l.resize(l.size() - 1);
-                        contentLength = boost::lexical_cast<size_t>(l);
+                        contentLength = boost::lexical_cast<std::size_t>(l);
                     }
                 }
             }
 
             if (readAll) {
-                size_t remainingSize = contentLength - outBuf.size();
+                std::size_t remainingSize = contentLength - outBuf.size();
                 subtask = async_read(socket, outBuf, transfer_exactly(remainingSize), asTask[ctx]);
             }
             ut_await_(subtask);
@@ -128,13 +128,13 @@ namespace detail
         const bool persistentConnection;
         const bool readAll;
         std::istream responseStream;
-        size_t contentLength;
+        std::size_t contentLength;
         ut::ContextRef<Context> ctx;
 
-        ut::Task<size_t> subtask;
+        ut::Task<std::size_t> subtask;
     };
 
-    struct HttpDownloadFrame : ut::AsyncFrame<size_t>
+    struct HttpDownloadFrame : ut::AsyncFrame<std::size_t>
     {
         HttpDownloadFrame(io_service& io, streambuf& outBuf,
             const std::string& host, const std::string& path,
@@ -174,11 +174,11 @@ namespace detail
         ut::ContextRef<Context> ctx;
 
         ut::Task<ip::tcp::endpoint> connectTask;
-        ut::Task<size_t> downloadTask;
+        ut::Task<std::size_t> downloadTask;
     };
 
     template <>
-    ut::Task<size_t> asyncHttpGetImpl<ip::tcp::socket>(
+    ut::Task<std::size_t> asyncHttpGetImpl<ip::tcp::socket>(
         ip::tcp::socket& socket, streambuf& outBuf,
         const std::string& host, const std::string& path,
         bool persistentConnection, bool readAll,
@@ -229,7 +229,7 @@ namespace detail
         ut::Task<void> handshakeTask;
     };
 
-    struct HttpsDownloadFrame : ut::AsyncFrame<size_t>
+    struct HttpsDownloadFrame : ut::AsyncFrame<std::size_t>
     {
         HttpsDownloadFrame(io_service& io, streambuf& outBuf,
             ssl::context_base::method sslVersion,
@@ -273,11 +273,11 @@ namespace detail
         ut::ContextRef<Context> ctx;
 
         ut::Task<ip::tcp::endpoint> connectTask;
-        ut::Task<size_t> downloadTask;
+        ut::Task<std::size_t> downloadTask;
     };
 
     template <>
-    ut::Task<size_t> asyncHttpGetImpl<ssl::stream<ip::tcp::socket>>(
+    ut::Task<std::size_t> asyncHttpGetImpl<ssl::stream<ip::tcp::socket>>(
         ssl::stream<ip::tcp::socket>& socket, streambuf& outBuf,
         const std::string& host, const std::string& path, bool persistentConnection, bool readAll,
         const ut::ContextRef<void>& ctx)
@@ -291,7 +291,7 @@ namespace detail
 #endif
 }
 
-ut::Task<size_t> asyncHttpDownload(
+ut::Task<std::size_t> asyncHttpDownload(
     io_service& io, streambuf& outBuf,
     const std::string& host, const std::string& path,
     const ut::ContextRef<void>& ctx)
@@ -313,7 +313,7 @@ ut::Task<ip::tcp::endpoint> asyncHttpsClientConnect(
     return ut::startAsyncOf<frame_type>(socket, host, ctx);
 }
 
-ut::Task<size_t> asyncHttpsDownload(
+ut::Task<std::size_t> asyncHttpsDownload(
     io_service& io, streambuf& outBuf,
     ssl::context_base::method sslVersion,
     const std::string& host, const std::string& path,

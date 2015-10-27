@@ -142,10 +142,10 @@ namespace detail
         using iterator_type = IteratorOf<Container>;
 
         Container awts;
-        size_t count;
+        std::size_t count;
         Instance<Promise<iterator_type>> promise;
 
-        SomeAwaiter(size_t count, Container&& awts)
+        SomeAwaiter(std::size_t count, Container&& awts)
             : awts(std::move(awts))
             , count(count)
         {
@@ -225,7 +225,7 @@ namespace detail
 
     template <class Container, class Alloc>
     Task<IteratorOf<Container>> whenSomeImpl(const Alloc& alloc,
-        size_t count, Container&& awts)
+        std::size_t count, Container&& awts)
     {
         using iterator_type = IteratorOf<Container>;
 
@@ -313,7 +313,7 @@ Task<AwaitableBase*> whenAny(const Alloc& alloc,
     static_assert(None<std::is_const<Awaitables>...>::value,
         "Expecting non-const lvalue references to Awaitables");
 
-    static const size_t count = 2 + sizeof...(Awaitables);
+    static const std::size_t count = 2 + sizeof...(Awaitables);
 
     std::array<AwaitableBase*, count> list { { &first, &second, &rest... } };
     return detail::whenAnyImpl(alloc, std::move(list));
@@ -333,25 +333,25 @@ Task<AwaitableBase*> whenAny(AwaitableBase& first, AwaitableBase& second, Awaita
 //
 
 template <class It, class Alloc>
-Task<It> whenSome(const Alloc& alloc, size_t count, Range<It> awts)
+Task<It> whenSome(const Alloc& alloc, std::size_t count, Range<It> awts)
 {
     return detail::whenSomeImpl(alloc, count, std::move(awts));
 }
 
 template <class It>
-Task<It> whenSome(size_t count, Range<It> awts)
+Task<It> whenSome(std::size_t count, Range<It> awts)
 {
     return detail::whenSomeImpl(std::allocator<char>(), count, std::move(awts));
 }
 
 template <class Container, class Alloc>
-Task<IteratorOf<Container>> whenSome(const Alloc& alloc, size_t count, Container& awts)
+Task<IteratorOf<Container>> whenSome(const Alloc& alloc, std::size_t count, Container& awts)
 {
     return whenSome(alloc, count, makeRange(awts));
 }
 
 template <class Container>
-Task<IteratorOf<Container>> whenSome(size_t count, Container& awts)
+Task<IteratorOf<Container>> whenSome(std::size_t count, Container& awts)
 {
     return whenSome(count, makeRange(awts));
 }
@@ -392,7 +392,7 @@ Task<AwaitableBase*> whenAll(const Alloc& alloc,
     static_assert(None<std::is_const<Awaitables>...>::value,
         "Expecting non-const lvalue references to Awaitables");
 
-    static const size_t count = 2 + sizeof...(Awaitables);
+    static const std::size_t count = 2 + sizeof...(Awaitables);
 
     std::array<AwaitableBase*, count> list { { &first, &second, &rest... } };
     return whenSome(alloc, count, list);

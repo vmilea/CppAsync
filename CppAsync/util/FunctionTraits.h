@@ -131,10 +131,10 @@ using FunctionHasResult = std::is_same<FunctionResult<F>, R>;
 template <class F>
 using FunctionArgs = typename FunctionTraits<F>::args_tuple_type;
 
-template <class F, size_t I>
+template <class F, std::size_t I>
 using FunctionArg = TupleElement<I, FunctionArgs<F>>;
 
-template <size_t First, size_t ...Rest>
+template <std::size_t First, std::size_t ...Rest>
 struct FunctionHasArity
 {
     template <class F>

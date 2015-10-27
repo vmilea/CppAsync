@@ -74,19 +74,19 @@ namespace detail
     template <int First, int ...Rest>
     struct IntListSizeImpl<First, Rest...>
     {
-        static const size_t value = 1 + IntListSizeImpl<Rest...>::value;
+        static const std::size_t value = 1 + IntListSizeImpl<Rest...>::value;
     };
 
     template <>
     struct IntListSizeImpl<>
     {
-        static const size_t value = 0;
+        static const std::size_t value = 0;
     };
 
-    template<size_t I, int ...Entries>
+    template<std::size_t I, int ...Entries>
     struct IntListElementImpl;
 
-    template<size_t I, int First, int ...Rest>
+    template<std::size_t I, int First, int ...Rest>
     struct IntListElementImpl<I, First, Rest...>
         : IntListElementImpl<I - 1, Rest...>{};
 
@@ -114,10 +114,10 @@ template <int ...Entries>
 struct IntListSize<IntList<Entries...>>
     : detail::IntListSizeImpl<Entries...> { };
 
-template <size_t I, class T>
+template <std::size_t I, class T>
 struct IntListElement;
 
-template <size_t I, int ...Entries>
+template <std::size_t I, int ...Entries>
 struct IntListElement<I, IntList<Entries...>>
     : detail::IntListElementImpl<I, Entries...> { };
 
@@ -134,7 +134,7 @@ struct IntListContains<Value, IntList<Entries...>>
 
 namespace detail
 {
-    template <size_t N, int ...S>
+    template <std::size_t N, int ...S>
     struct GenIntSeq : GenIntSeq<N - 1, N - 1, S...> { };
 
     template <int ...S>
@@ -144,17 +144,17 @@ namespace detail
     };
 }
 
-template <size_t N>
+template <std::size_t N>
 using IntSeq = typename detail::GenIntSeq<N>::type;
 
 //
 // Type list properties
 //
 
-template <size_t I, class T>
+template <std::size_t I, class T>
 using TupleElement = typename std::tuple_element<I, T>::type;
 
-template <size_t I, class ...Types>
+template <std::size_t I, class ...Types>
 using TypeAt = TupleElement<I, std::tuple<Types...>>;
 
 //
@@ -244,7 +244,7 @@ using TagByNoThrowCopyable = TagByNoThrow<IsNoThrowCopyable<T>::value>;
 template <class T>
 using TagByNoThrowMovable = TagByNoThrow<IsNoThrowMovable<T>::value>;
 
-template <size_t I>
+template <std::size_t I>
 using Overload = std::integral_constant<int, I>*;
 
 template <class T>
@@ -259,10 +259,10 @@ using Void = typename detail::VoidImpl<Ts...>::type;
 
 namespace detail
 {
-    template <size_t I, class ...Types>
+    template <std::size_t I, class ...Types>
     struct SkipImpl;
 
-    template<size_t I, class First, class ...Rest>
+    template<std::size_t I, class First, class ...Rest>
     struct SkipImpl<I, First, Rest...>
         : SkipImpl<I - 1, Rest...> { };
 
@@ -272,17 +272,17 @@ namespace detail
         using type = std::tuple<Rest...>;
     };
 
-    template <size_t I, class T>
+    template <std::size_t I, class T>
     struct TupleSkipImpl;
 
-    template <size_t I, class ...Types>
+    template <std::size_t I, class ...Types>
     struct TupleSkipImpl<I, std::tuple<Types...>>
         : SkipImpl<I, Types...> { };
 
-    template <size_t I, class Accumulator, class ...Types>
+    template <std::size_t I, class Accumulator, class ...Types>
     struct TakeImpl;
 
-    template <size_t I, class ...Taken, class First, class ...Rest>
+    template <std::size_t I, class ...Taken, class First, class ...Rest>
     struct TakeImpl<I, std::tuple<Taken...>, First, Rest...>
         : TakeImpl<I - 1, std::tuple<Taken..., First>, Rest...> { };
 
@@ -292,24 +292,24 @@ namespace detail
         using type = std::tuple<Taken...>;
     };
 
-    template <size_t I, class T>
+    template <std::size_t I, class T>
     struct TupleTakeImpl;
 
-    template <size_t I, class ...Types>
+    template <std::size_t I, class ...Types>
     struct TupleTakeImpl<I, std::tuple<Types...>>
         : TakeImpl<I, std::tuple<>, Types...> { };
 }
 
-template <size_t I, class ...Types>
+template <std::size_t I, class ...Types>
 using Skip = typename detail::SkipImpl<I, Types...>::type;
 
-template <size_t I, class T>
+template <std::size_t I, class T>
 using TupleSkip = typename detail::TupleSkipImpl<I, T>::type;
 
-template <size_t I, class ...Types>
+template <std::size_t I, class ...Types>
 using Take = typename detail::TakeImpl<I, std::tuple<>, Types...>::type;
 
-template <size_t I, class T>
+template <std::size_t I, class T>
 using TupleTake = typename detail::TupleTakeImpl<I, T>::type;
 
 //

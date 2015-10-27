@@ -43,9 +43,9 @@ T lexicalCastImpl(const std::string& s)
 }
 
 template <>
-size_t lexicalCast<size_t>(const std::string& s)
+std::size_t lexicalCast<std::size_t>(const std::string& s)
 {
-    return lexicalCastImpl<size_t>(s);
+    return lexicalCastImpl<std::size_t>(s);
 }
 
 template <>

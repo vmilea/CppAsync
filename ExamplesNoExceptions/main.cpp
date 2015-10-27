@@ -34,18 +34,18 @@ static const Example EXAMPLES[] =
 
 int main()
 {
-    size_t numExamples = sizeof(EXAMPLES) / sizeof(Example);
-    size_t selected = 0;
+    std::size_t numExamples = sizeof(EXAMPLES) / sizeof(Example);
+    std::size_t selected = 0;
 
     while (selected < 1 || numExamples < selected) {
         printf("Examples:\n\n");
 
-        for (size_t i = 0; i < numExamples; i++)
+        for (std::size_t i = 0; i < numExamples; i++)
             printf("%02d: %s\n", (int) (i + 1), EXAMPLES[i].description);
 
         printf("\nChoose: ");
         const char *line = util::readLine();
-        selected = util::lexicalCast<size_t>(line);
+        selected = util::lexicalCast<std::size_t>(line);
 
         printf("\n----------\n\n");
     }

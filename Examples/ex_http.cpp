@@ -84,7 +84,7 @@ static ut::Task<void> asyncHttpDownload(asio::streambuf& outBuf,
         ut::ContextRef<Context> ctx;
 
         ut::Task<tcp::resolver::iterator> resolveTask, connectTask;
-        ut::Task<size_t> downloadTask;
+        ut::Task<std::size_t> downloadTask;
     };
 
     return ut::startAsyncOf<Frame>(outBuf, std::move(host), std::move(path));

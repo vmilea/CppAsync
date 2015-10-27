@@ -425,7 +425,7 @@ namespace detail
             ut_dcheck(rAllValid(range) &&
                 "Can't await invalid objects");
 
-            size_t count = 0;
+            std::size_t count = 0;
 
             for (auto& item : range) {
                 AwaitableBase& awt = selectAwaitable(item);

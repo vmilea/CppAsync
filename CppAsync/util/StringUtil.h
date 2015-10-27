@@ -34,7 +34,7 @@ namespace ut {
 # define snprintf c99_snprintf
 # define vsnprintf c99_vsnprintf
 
-inline int c99_vsnprintf(char *outBuf, size_t size, const char *format, va_list ap)
+inline int c99_vsnprintf(char *outBuf, std::size_t size, const char *format, va_list ap)
 {
     int count = -1;
 
@@ -46,7 +46,7 @@ inline int c99_vsnprintf(char *outBuf, size_t size, const char *format, va_list 
     return count;
 }
 
-inline int c99_snprintf(char *outBuf, size_t size, const char *format, ...)
+inline int c99_snprintf(char *outBuf, std::size_t size, const char *format, ...)
 {
     int count;
     va_list ap;
@@ -61,7 +61,8 @@ inline int c99_snprintf(char *outBuf, size_t size, const char *format, ...)
 #endif // _MSC_VER
 
 
-inline int safe_vprintf(std::vector<char>& outBuf, size_t pos, const char *format, va_list ap)
+inline int safe_vprintf(std::vector<char>& outBuf, std::size_t pos, const char *format,
+    va_list ap)
 {
     ut_dcheck(pos <= outBuf.size() &&
         "pos out of bounds");
@@ -73,7 +74,7 @@ inline int safe_vprintf(std::vector<char>& outBuf, size_t pos, const char *forma
 
     if (numChars >= 0) {
         if (numChars >= (int) (outBuf.size() - pos)) {
-            size_t newSize = pos + numChars + 1;
+            std::size_t newSize = pos + numChars + 1;
 
             if (newSize < outBuf.size() * 2 + 64)
                 newSize = outBuf.size() * 2 + 64;
@@ -86,7 +87,7 @@ inline int safe_vprintf(std::vector<char>& outBuf, size_t pos, const char *forma
     return numChars;
 }
 
-inline int safe_printf(std::vector<char>& outBuf, size_t pos, const char *format, ...)
+inline int safe_printf(std::vector<char>& outBuf, std::size_t pos, const char *format, ...)
 {
     va_list ap;
     va_start(ap, format);

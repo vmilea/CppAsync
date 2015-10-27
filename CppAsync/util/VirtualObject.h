@@ -166,7 +166,7 @@ public:
     }
 };
 
-template <class Interface, size_t Len, size_t Align>
+template <class Interface, std::size_t Len, std::size_t Align>
 class VirtualObjectData
 {
 public:
@@ -339,7 +339,7 @@ private:
     };
 };
 
-template <class Interface, size_t Len, size_t Align>
+template <class Interface, std::size_t Len, std::size_t Align>
 void swap(VirtualObjectData<Interface, Len, Align>& a,
     VirtualObjectData<Interface, Len, Align>& b) _ut_noexcept
 {

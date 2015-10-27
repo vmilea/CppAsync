@@ -31,14 +31,14 @@ namespace util { namespace asio {
 namespace detail
 {
     template <class Socket>
-    ut::Task<size_t> asyncHttpGetImpl(
+    ut::Task<std::size_t> asyncHttpGetImpl(
         Socket& socket, boost::asio::streambuf& outBuf,
         const std::string& host, const std::string& path, bool persistentConnection, bool readAll,
         const ut::ContextRef<void>& ctx);
 }
 
 template <class Socket>
-ut::Task<size_t> asyncHttpGetHeader(
+ut::Task<std::size_t> asyncHttpGetHeader(
     Socket& socket, boost::asio::streambuf& outBuf,
     const std::string& host, const std::string& path, bool persistentConnection,
     const ut::ContextRef<void>& ctx)
@@ -48,7 +48,7 @@ ut::Task<size_t> asyncHttpGetHeader(
 }
 
 template <class Socket>
-ut::Task<size_t> asyncHttpGet(
+ut::Task<std::size_t> asyncHttpGet(
     Socket& socket, boost::asio::streambuf& outBuf,
     const std::string& host, const std::string& path, bool persistentConnection,
     const ut::ContextRef<void>& ctx)
@@ -57,7 +57,7 @@ ut::Task<size_t> asyncHttpGet(
         host, path, persistentConnection, true, ctx);
 }
 
-ut::Task<size_t> asyncHttpDownload(
+ut::Task<std::size_t> asyncHttpDownload(
     boost::asio::io_service& io, boost::asio::streambuf& outBuf,
     const std::string& host, const std::string& path,
     const ut::ContextRef<void>& ctx);
@@ -70,7 +70,7 @@ ut::Task<boost::asio::ip::tcp::endpoint> asyncHttpsClientConnect(
     const std::string& host,
     const ut::ContextRef<void>& ctx);
 
-ut::Task<size_t> asyncHttpsDownload(
+ut::Task<std::size_t> asyncHttpsDownload(
     boost::asio::io_service& io, boost::asio::streambuf& outBuf,
     boost::asio::ssl::context_base::method sslVersion,
     const std::string& host, const std::string& path,

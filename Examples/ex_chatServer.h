@@ -94,7 +94,7 @@ public:
     }
 
 private:
-    static const size_t MAX_HISTORY_SIZE = 10;
+    static const std::size_t MAX_HISTORY_SIZE = 10;
 
     std::set<Guest*> mGuests;
     std::deque<Msg> mHistory; // circular buffer

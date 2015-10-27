@@ -131,14 +131,14 @@ namespace detail
     };
 }
 
-template <class Signature, size_t Capacity>
+template <class Signature, std::size_t Capacity>
 class ErasedFunction;
 
-template <class R, class ...Args, size_t Capacity>
+template <class R, class ...Args, std::size_t Capacity>
 class ErasedFunction<R (Args...), Capacity>
 {
 public:
-    static const size_t capacity = Capacity;
+    static const std::size_t capacity = Capacity;
 
     ErasedFunction() _ut_noexcept { }
 
@@ -256,38 +256,38 @@ private:
     action_data_type mActionData;
 };
 
-template <class Signature, size_t Capacity>
+template <class Signature, std::size_t Capacity>
 void swap(ErasedFunction<Signature, Capacity>& a,
     ErasedFunction<Signature, Capacity>& b) _ut_noexcept
 {
     a.swap(b);
 }
 
-template <class Signature, size_t Capacity>
+template <class Signature, std::size_t Capacity>
 bool operator==(const ErasedFunction<Signature, Capacity>& a, std::nullptr_t) _ut_noexcept
 {
     return !a;
 }
 
-template <class Signature, size_t Capacity>
+template <class Signature, std::size_t Capacity>
 bool operator!=(const ErasedFunction<Signature, Capacity>& a, std::nullptr_t) _ut_noexcept
 {
     return !!a;
 }
 
-template <class Signature, size_t Capacity>
+template <class Signature, std::size_t Capacity>
 bool operator==(std::nullptr_t, const ErasedFunction<Signature, Capacity>& a) _ut_noexcept
 {
     return !a;
 }
 
-template <class Signature, size_t Capacity>
+template <class Signature, std::size_t Capacity>
 bool operator!=(std::nullptr_t, const ErasedFunction<Signature, Capacity>& a) _ut_noexcept
 {
     return !!a;
 }
 
-static const size_t default_function_capacity = ut::Max<
+static const std::size_t default_function_capacity = ut::Max<
     5 * ut::ptr_size,
     sizeof(std::function<void ()>)>::value;
 

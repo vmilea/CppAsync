@@ -210,8 +210,8 @@ private:
     ut::Task<void> mWriterTask;
     ut::Task<void> mEvtTask;
     ut::Task<tcp::endpoint> mConnectTask;
-    ut::Task<size_t> mReadTask;
-    ut::Task<size_t> mWriteTask;
+    ut::Task<std::size_t> mReadTask;
+    ut::Task<std::size_t> mWriteTask;
 };
 
 }

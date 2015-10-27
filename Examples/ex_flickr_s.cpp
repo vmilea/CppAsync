@@ -53,7 +53,7 @@ static ut::Task<void> asyncFlickrDownload(const std::vector<std::string>& tags,
     struct TransferSlot
     {
         asio::streambuf buf;
-        ut::Task<size_t> task;
+        ut::Task<std::size_t> task;
     };
 
     struct DownloadSlot : TransferSlot
@@ -99,7 +99,7 @@ static ut::Task<void> asyncFlickrDownload(const std::vector<std::string>& tags,
 
         while (totalPicsRemaining > 0 || numActiveTransfers > 0) {
             if (!ctx->querySlot.task.isRunning()
-                && (photoQueue.size() < (size_t) std::min(numPics / 2, totalPicsRemaining))) {
+                && (photoQueue.size() < (std::size_t) std::min(numPics / 2, totalPicsRemaining))) {
                 // Request a page of photo links.
                 auto queryUrl = makeFlickrQueryUrl(tags, numPicsPerPage, page++);
 
@@ -152,7 +152,7 @@ static ut::Task<void> asyncFlickrDownload(const std::vector<std::string>& tags,
                 printf("   photo queue size: %d\n", (int) photoQueue.size());
 
                 // Make slot available.
-                ctx->querySlot.task = ut::Task<size_t>();
+                ctx->querySlot.task = ut::Task<std::size_t>();
             } else { // photo download done
                 auto& dlSlot = *anyDownloadTask.get();
 
@@ -165,7 +165,7 @@ static ut::Task<void> asyncFlickrDownload(const std::vector<std::string>& tags,
                 printf("<- [%d] photo downloaded (%s)\n", ctx->indexOf(dlSlot), savePath.c_str());
 
                 // Make slot available.
-                dlSlot.task = ut::Task<size_t>();
+                dlSlot.task = ut::Task<std::size_t>();
             }
         }
     }, 256 * 1024); // need stack > 64KB

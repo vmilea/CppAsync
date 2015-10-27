@@ -433,11 +433,11 @@ private:
     UnsafeEitherData(const UnsafeEitherData& other) = delete;
     UnsafeEitherData& operator=(const UnsafeEitherData& other) = delete;
 
-    static const size_t data_size = Max<
+    static const std::size_t data_size = Max<
         sizeof(A),
         sizeof(B)>::value;
 
-    static const size_t data_alignment = Max<
+    static const std::size_t data_alignment = Max<
         std::alignment_of<A>::value,
         std::alignment_of<B>::value>::value;
 

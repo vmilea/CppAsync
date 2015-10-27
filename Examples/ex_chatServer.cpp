@@ -203,8 +203,8 @@ private:
     ut::Task<void> mReaderTask;
     ut::Task<void> mWriterTask;
     ut::Task<void> mEvtTask;
-    ut::Task<size_t> mReadTask;
-    ut::Task<size_t> mWriteTask;
+    ut::Task<std::size_t> mReadTask;
+    ut::Task<std::size_t> mWriteTask;
 };
 
 // Specialization allows awaiting the termination of a ClientSession.

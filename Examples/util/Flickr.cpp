@@ -32,7 +32,7 @@ Url makeFlickrQueryUrl(const std::vector<std::string>& tags, int perPage, int pa
         + FLICKR_API_KEY;
 
     path += "&tags=" + tags[0];
-    for (size_t i = 1; i < tags.size(); i++)
+    for (std::size_t i = 1; i < tags.size(); i++)
         path += "+" + tags[i];
 
     path += "&per_page=" + boost::lexical_cast<std::string>(perPage);
