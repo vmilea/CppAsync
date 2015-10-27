@@ -16,7 +16,7 @@
 
 #pragma once
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) || defined(__MINGW32__)
 
 #ifndef WINVER
 #define WINVER 0x501
@@ -36,7 +36,7 @@
 
 #define WIN32_LEAN_AND_MEAN
 
-#endif // _MSC_VER
+#endif // _MSC_VER || __MINGW32__
 
 #include "../CppAsync/impl/Common.h"
 

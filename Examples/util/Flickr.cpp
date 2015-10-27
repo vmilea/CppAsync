@@ -24,78 +24,75 @@
 #include <sstream>
 #include <stdexcept>
 
-namespace util {
+namespace util { namespace flickr  {
 
-namespace flickr
+Url makeFlickrQueryUrl(const std::vector<std::string>& tags, int perPage, int page)
 {
-    Url makeFlickrQueryUrl(const std::vector<std::string>& tags, int perPage, int page)
-    {
-        std::string path = "/services/rest/?method=flickr.photos.search&format=rest&api_key="
-            + FLICKR_API_KEY;
+    std::string path = "/services/rest/?method=flickr.photos.search&format=rest&api_key="
+        + FLICKR_API_KEY;
 
-        path += "&tags=" + tags[0];
-        for (size_t i = 1; i < tags.size(); i++)
-            path += "+" + tags[i];
+    path += "&tags=" + tags[0];
+    for (size_t i = 1; i < tags.size(); i++)
+        path += "+" + tags[i];
 
-        path += "&per_page=" + boost::lexical_cast<std::string>(perPage);
-        path += "&page=" + boost::lexical_cast<std::string>(page);
+    path += "&per_page=" + boost::lexical_cast<std::string>(perPage);
+    path += "&page=" + boost::lexical_cast<std::string>(page);
 
-        return Url { FLICKR_API_HOST, path };
-    }
+    return Url { FLICKR_API_HOST, path };
+}
 
-    Url makeFlickrPhotoUrl(const FlickrPhoto& photo)
-    {
-        // Format: http://farm{farm-id}.staticflickr.com/{server-id}/{id}_{secret}_[mstzb].jpg
+Url makeFlickrPhotoUrl(const FlickrPhoto& photo)
+{
+    // Format: http://farm{farm-id}.staticflickr.com/{server-id}/{id}_{secret}_[mstzb].jpg
 
-        std::string host = "farm" + photo.farm + ".staticflickr.com";
-        std::string path = "/" + photo.server + "/" + photo.id + "_" + photo.secret + "_m.jpg";
+    std::string host = "farm" + photo.farm + ".staticflickr.com";
+    std::string path = "/" + photo.server + "/" + photo.id + "_" + photo.secret + "_m.jpg";
 
-        return Url { host, path };
-    }
+    return Url { host, path };
+}
 
-    FlickrPhotos parseFlickrResponse(boost::asio::streambuf& response)
-    {
-        namespace pt = boost::property_tree;
+FlickrPhotos parseFlickrResponse(boost::asio::streambuf& response)
+{
+    namespace pt = boost::property_tree;
 
-        FlickrPhotos result;
+    FlickrPhotos result;
 
-        std::stringstream ss;
-        ss << &response;
-        pt::ptree tree;
-        pt::read_xml(ss, tree);
+    std::stringstream ss;
+    ss << &response;
+    pt::ptree tree;
+    pt::read_xml(ss, tree);
 
-        const pt::ptree& rsp = tree.get_child("rsp");
-        const std::string& stat = rsp.get("<xmlattr>.stat", "error");
+    const pt::ptree& rsp = tree.get_child("rsp");
+    const std::string& stat = rsp.get("<xmlattr>.stat", "error");
 
-        if (stat != "ok")
-            throw std::runtime_error(ut::string_printf(
-                "Flickr response not ok: %s", stat.c_str()));
+    if (stat != "ok")
+        throw std::runtime_error(ut::string_printf(
+            "Flickr response not ok: %s", stat.c_str()));
 
-        for (auto& node : rsp.get_child("photos")) {
-            const pt::ptree& value = node.second;
+    for (auto& node : rsp.get_child("photos")) {
+        const pt::ptree& value = node.second;
 
-            if (node.first == "<xmlattr>") {
-                result.page = value.get<int>("page");
-                result.pages = value.get<int>("pages");
-                result.perPage = value.get<int>("perpage");
-                result.total = value.get<int>("total");
-            } else {
-                FlickrPhoto fp;
-                fp.id = value.get<std::string>("<xmlattr>.id");
-                fp.owner = value.get<std::string>("<xmlattr>.owner");
-                fp.secret = value.get<std::string>("<xmlattr>.secret");
-                fp.server = value.get<std::string>("<xmlattr>.server");
-                fp.farm = value.get<std::string>("<xmlattr>.farm");
-                fp.title = value.get<std::string>("<xmlattr>.title");
+        if (node.first == "<xmlattr>") {
+            result.page = value.get<int>("page");
+            result.pages = value.get<int>("pages");
+            result.perPage = value.get<int>("perpage");
+            result.total = value.get<int>("total");
+        } else {
+            FlickrPhoto fp;
+            fp.id = value.get<std::string>("<xmlattr>.id");
+            fp.owner = value.get<std::string>("<xmlattr>.owner");
+            fp.secret = value.get<std::string>("<xmlattr>.secret");
+            fp.server = value.get<std::string>("<xmlattr>.server");
+            fp.farm = value.get<std::string>("<xmlattr>.farm");
+            fp.title = value.get<std::string>("<xmlattr>.title");
 
-                result.photos.push_back(fp);
-            }
+            result.photos.push_back(fp);
         }
-
-        return result;
     }
+
+    return result;
 }
 
-}
+} } // util::flickr
 
 #endif // HAVE_BOOST

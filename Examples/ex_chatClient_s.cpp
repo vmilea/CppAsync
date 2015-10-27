@@ -20,8 +20,8 @@
 
 #include "Common.h"
 #include "util/IO.h"
-#include <CppAsync/AsioWrappers.h>
 #include <CppAsync/StackfulAsync.h>
+#include <CppAsync/asio/Asio.h>
 #include <CppAsync/util/ScopeGuard.h>
 #include <CppAsync/util/StringUtil.h>
 #include <cstdio>
@@ -32,7 +32,10 @@
 
 namespace {
 
-namespace asio = boost::asio;
+namespace asio {
+    using namespace boost::asio;
+    using namespace ut::asio;
+}
 using asio::ip::tcp;
 
 static asio::io_service sIo;
@@ -83,12 +86,12 @@ private:
 
         // Suspend until connected to server.
         ut::stackful::await_(
-            ut::asyncResolveAndConnect(mCtx->socket, mCtx, mQuery));
+            asio::asyncResolveAndConnect(mCtx->socket, mQuery, mCtx));
 
         // Suspend until we've introduced self.
         mCtx->msg = mNickname + "\n";
         ut::stackful::await_(
-            ut::asyncWrite(mCtx->socket, asio::buffer(mCtx->msg), mCtx));
+            asio::async_write(mCtx->socket, asio::buffer(mCtx->msg), asio::asTask[mCtx]));
 
         // Start input loop.
         std::thread([this] { inputFunc(); }).detach();
@@ -106,7 +109,8 @@ private:
         do {
             // Suspend until a message has been read.
             ut::stackful::await_(
-                ut::asyncReadUntil(mCtx->socket, mCtx->buf, mCtx, std::string("\n")));
+                asio::async_read_until(mCtx->socket, mCtx->buf, std::string("\n"),
+                    asio::asTask[mCtx]));
 
             std::string line;
             std::getline(std::istream(&mCtx->buf), line);
@@ -131,7 +135,7 @@ private:
 
                 // Suspend until message has been sent.
                 ut::stackful::await_(
-                    ut::asyncWrite(mCtx->socket, asio::buffer(mCtx->msg), mCtx));
+                    asio::async_write(mCtx->socket, asio::buffer(mCtx->msg), asio::asTask[mCtx]));
 
                 if (mCtx->msg == "/leave\n")
                     quit = true;

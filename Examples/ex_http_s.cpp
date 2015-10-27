@@ -18,11 +18,15 @@
 
 #include "Common.h"
 #include "util/AsioHttp.h"
-#include <CppAsync/AsioWrappers.h>
 #include <CppAsync/StackfulAsync.h>
+#include <CppAsync/asio/Asio.h>
 #include <fstream>
 
-namespace asio = boost::asio;
+namespace asio {
+    using namespace boost::asio;
+    using namespace ut::asio;
+    using namespace util::asio;
+}
 using asio::ip::tcp;
 
 static asio::io_service sIo;
@@ -33,17 +37,31 @@ static ut::Task<void> asyncHttpDownload(asio::streambuf& outBuf, std::string hos
         struct Context
         {
             tcp::socket socket;
+            tcp::resolver resolver;
 
-            Context()
-                : socket(sIo) { }
+            Context() : socket(sIo), resolver(sIo) { }
         };
         auto ctx = ut::makeContext<Context>();
 
-        auto connectTask = ut::asyncResolveAndConnect(ctx->socket, ctx,
-            asio::ip::tcp::resolver::query(host, "http"));
+        // Any Boost.Asio async function may take ut::asio::asTask instead of a regular
+        // completion handler, in order to produce a Task that is hooked up to the async
+        // operation. See AsioTraits.h for inner magic.
+        //
+        // Boost context (like sockets, resolvers, data buffers) must be kept alive until
+        // ASIO callback even if Task gets canceled and coroutine deleted. This is ensured
+        // by having asTask[ctx] capture a shared_ptr to the context within the completion
+        // handler.
+        //
+        auto resolveTask = ctx->resolver.async_resolve(
+                asio::ip::tcp::resolver::query(host, "http"),
+                asio::asTask[ctx]);
+        ut::stackful::await_(resolveTask);
+
+        // Compound operations can be abstracted as subtasks.
+        auto connectTask = asio::asyncConnectToAny(ctx->socket, resolveTask.get(), ctx);
         ut::stackful::await_(connectTask);
 
-        auto downloadTask = util::asyncHttpGet(ctx->socket, outBuf, ctx, host, path, false);
+        auto downloadTask = asio::asyncHttpGet(ctx->socket, outBuf, host, path, false, ctx);
         ut::stackful::await_(downloadTask);
     });
 }

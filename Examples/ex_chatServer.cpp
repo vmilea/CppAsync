@@ -20,16 +20,19 @@
 
 #include "Common.h"
 #include "ex_chatServer.h"
-#include <CppAsync/AsioWrappers.h>
 #include <CppAsync/Combinators.h>
 #include <CppAsync/StacklessAsync.h>
+#include <CppAsync/asio/Asio.h>
 #include <cstdio>
 #include <deque>
 #include <list>
 
 namespace {
 
-namespace asio = boost::asio;
+namespace asio {
+    using namespace boost::asio;
+    using namespace ut::asio;
+}
 using asio::ip::tcp;
 
 static asio::io_service sIo;
@@ -107,7 +110,8 @@ private:
         ut_begin_function(coroState);
 
         // Session begins with client introducing himself.
-        mReadTask = ut::asyncReadUntil(mCtx->socket, mCtx->buf, mCtx, std::string("\n"));
+        mReadTask = asio::async_read_until(mCtx->socket, mCtx->buf, std::string("\n"),
+            asio::asTask[mCtx]);
         ut_await_(mReadTask);
         std::getline(std::istream(&mCtx->buf), mNickname);
 
@@ -139,7 +143,8 @@ private:
 
         do {
             // Suspend until a message has been read.
-            mReadTask = ut::asyncReadUntil(mCtx->socket, mCtx->buf, mCtx, std::string("\n"));
+            mReadTask = asio::async_read_until(mCtx->socket, mCtx->buf, std::string("\n"),
+                asio::asTask[mCtx]);
             ut_await_(mReadTask);
 
             std::getline(std::istream(&mCtx->buf), line);
@@ -169,7 +174,8 @@ private:
                 mMsgQueue.pop_front();
 
                 // Suspend until message has been sent.
-                mWriteTask = ut::asyncWrite(mCtx->socket, asio::buffer(mCtx->msg), mCtx);
+                mWriteTask = asio::async_write(mCtx->socket, asio::buffer(mCtx->msg),
+                    asio::asTask[mCtx]);
                 ut_await_(mWriteTask);
             }
         } while (true);
@@ -231,7 +237,7 @@ static ut::Task<void> asyncChatServer(uint16_t port)
                 if (session == nullptr) {
                     // Prepare for new connection.
                     session.reset(new ClientSession(room));
-                    acceptTask = ut::asyncAccept(ctx->acceptor, session->socket(), ctx);
+                    acceptTask = ctx->acceptor.async_accept(session->socket(), asio::asTask[ctx]);
                 }
 
                 sessionEndedTask = ut::whenAny(ctx->sessions);

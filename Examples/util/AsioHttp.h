@@ -19,77 +19,65 @@
 #ifdef HAVE_BOOST
 
 #include "../Common.h"
-#include <CppAsync/AsioWrappers.h>
+#include <CppAsync/asio/Asio.h>
 #include <string>
 
 #ifdef HAVE_OPENSSL
 #include <boost/asio/ssl.hpp>
 #endif
 
-namespace util {
-
-namespace asio = boost::asio;
+namespace util { namespace asio {
 
 namespace detail
 {
     template <class Socket>
     ut::Task<size_t> asyncHttpGetImpl(
-        Socket& socket, asio::streambuf& outBuf,
-        const ut::ContextRef<void>& ctx,
-        const std::string& host, const std::string& path,
-        bool persistentConnection, bool readAll);
+        Socket& socket, boost::asio::streambuf& outBuf,
+        const std::string& host, const std::string& path, bool persistentConnection, bool readAll,
+        const ut::ContextRef<void>& ctx);
 }
 
 template <class Socket>
-ut::Task<size_t> asyncHttpGetHeader(Socket& socket, asio::streambuf& outBuf,
-    const ut::ContextRef<void>& ctx,
-    const std::string& host, const std::string& path, bool persistentConnection)
+ut::Task<size_t> asyncHttpGetHeader(
+    Socket& socket, boost::asio::streambuf& outBuf,
+    const std::string& host, const std::string& path, bool persistentConnection,
+    const ut::ContextRef<void>& ctx)
 {
-    return detail::asyncHttpGetImpl(socket, outBuf, ctx,
-        host, path, persistentConnection, false);
+    return detail::asyncHttpGetImpl(socket, outBuf,
+        host, path, persistentConnection, false, ctx);
 }
 
 template <class Socket>
-ut::Task<size_t> asyncHttpGet(Socket& socket, asio::streambuf& outBuf,
-    const ut::ContextRef<void>& ctx,
-    const std::string& host, const std::string& path, bool persistentConnection)
+ut::Task<size_t> asyncHttpGet(
+    Socket& socket, boost::asio::streambuf& outBuf,
+    const std::string& host, const std::string& path, bool persistentConnection,
+    const ut::ContextRef<void>& ctx)
 {
-    return detail::asyncHttpGetImpl(socket, outBuf, ctx,
-        host, path, persistentConnection, true);
+    return detail::asyncHttpGetImpl(socket, outBuf,
+        host, path, persistentConnection, true, ctx);
 }
 
-ut::Task<size_t> asyncHttpDownload(asio::io_service& io, asio::streambuf& outBuf,
-    const ut::ContextRef<void>& ctx,
-    const std::string& host, const std::string& path);
+ut::Task<size_t> asyncHttpDownload(
+    boost::asio::io_service& io, boost::asio::streambuf& outBuf,
+    const std::string& host, const std::string& path,
+    const ut::ContextRef<void>& ctx);
 
 
 #ifdef HAVE_OPENSSL
 
-template <class Handshake>
-ut::Task<void> asyncHandshake(asio::ssl::stream<asio::ip::tcp::socket>& socket,
-    const ut::ContextRef<void>& ctx,
-    Handshake type)
-{
-    ut::Task<void> task;
-    socket.async_handshake(type, ut::makeAsioHandler(task, ctx));
-    return task;
-}
+ut::Task<boost::asio::ip::tcp::endpoint> asyncHttpsClientConnect(
+    boost::asio::ssl::stream<boost::asio::ip::tcp::socket>& socket,
+    const std::string& host,
+    const ut::ContextRef<void>& ctx);
 
-ut::Task<asio::ip::tcp::endpoint> asyncHttpsClientConnect(
-    asio::ssl::stream<asio::ip::tcp::socket>& socket,
-    const ut::ContextRef<void>& ctx,
-    const std::string& host);
-
-ut::Task<size_t> asyncHttpsDownload(asio::io_service& io, asio::streambuf& outBuf,
-    const ut::ContextRef<void>& ctx,
-    asio::ssl::context_base::method sslVersion,
-    const std::string& host, const std::string& path);
-
-ut::Task<void> asyncShutdown(asio::ssl::stream<asio::ip::tcp::socket>& socket,
+ut::Task<size_t> asyncHttpsDownload(
+    boost::asio::io_service& io, boost::asio::streambuf& outBuf,
+    boost::asio::ssl::context_base::method sslVersion,
+    const std::string& host, const std::string& path,
     const ut::ContextRef<void>& ctx);
 
 #endif // HAVE_OPENSSL
 
-}
+} } // util::asio
 
 #endif // HAVE_BOOST

@@ -18,11 +18,15 @@
 
 #include "Common.h"
 #include "util/AsioHttp.h"
-#include <CppAsync/AsioWrappers.h>
 #include <CppAsync/StacklessAsync.h>
+#include <CppAsync/asio/Asio.h>
 #include <fstream>
 
-namespace asio = boost::asio;
+namespace asio {
+    using namespace boost::asio;
+    using namespace ut::asio;
+    using namespace util::asio;
+}
 using asio::ip::tcp;
 
 static asio::io_service sIo;
@@ -42,11 +46,24 @@ static ut::Task<void> asyncHttpDownload(asio::streambuf& outBuf,
         {
             ut_begin();
 
-            connectTask = ut::asyncResolveAndConnect(ctx->socket, ctx,
-                asio::ip::tcp::resolver::query(host, "http"));
+            // Any Boost.Asio async function may take ut::asio::asTask instead of a regular
+            // completion handler, in order to produce a Task that is hooked up to the async
+            // operation. See AsioTraits.h for inner magic.
+            //
+            // Boost context (like sockets, resolvers, data buffers) must be kept alive until
+            // ASIO callback even if Task gets canceled and coroutine deleted. This is ensured
+            // by having asTask[ctx] capture a shared_ptr to the context within the completion
+            // handler.
+            //
+            resolveTask = ctx->resolver.async_resolve(
+                asio::ip::tcp::resolver::query(host, "http"),
+                asio::asTask[ctx]);
+
+            // Compound operations can be abstracted as subtasks.
+            connectTask = asio::asyncConnectToAny(ctx->socket, resolveTask.get(), ctx);
             ut_await_(connectTask);
 
-            downloadTask = util::asyncHttpGet(ctx->socket, outBuf, ctx, host, path, false);
+            downloadTask = asio::asyncHttpGet(ctx->socket, outBuf, host, path, false, ctx);
             ut_await_(downloadTask);
 
             ut_end();
@@ -56,15 +73,16 @@ static ut::Task<void> asyncHttpDownload(asio::streambuf& outBuf,
         struct Context
         {
             tcp::socket socket;
+            tcp::resolver resolver;
 
-            Context()
-                : socket(sIo) { }
+            Context() : socket(sIo), resolver(sIo) { }
         };
 
         asio::streambuf& outBuf;
         const std::string host, path;
         ut::ContextRef<Context> ctx;
-        ut::Task<tcp::endpoint> connectTask;
+
+        ut::Task<tcp::resolver::iterator> resolveTask, connectTask;
         ut::Task<size_t> downloadTask;
     };
 

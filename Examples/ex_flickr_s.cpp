@@ -21,7 +21,6 @@
 #include "util/AsioHttp.h"
 #include "util/IO.h"
 #include "util/Flickr.h"
-#include <CppAsync/AsioWrappers.h>
 #include <CppAsync/Combinators.h>
 #include <CppAsync/StackfulAsync.h>
 #include <CppAsync/util/Range.h>
@@ -30,7 +29,10 @@
 #include <deque>
 #include <fstream>
 
-namespace asio = boost::asio;
+namespace asio {
+    using namespace boost::asio;
+    using namespace util::asio;
+}
 using asio::ip::tcp;
 
 static asio::io_service sIo;
@@ -85,8 +87,8 @@ static ut::Task<void> asyncFlickrDownload(const std::vector<std::string>& tags,
         auto ctx = ut::makeContext<Context>();
 
         // Prepare a persistent SSL connection for API queries.
-        ut::Task<tcp::endpoint> connectTask = util::asyncHttpsClientConnect(ctx->apiSocket, ctx,
-            FLICKR_API_HOST);
+        ut::Task<tcp::endpoint> connectTask = asio::asyncHttpsClientConnect(ctx->apiSocket,
+            FLICKR_API_HOST, ctx);
         ut::stackful::await_(connectTask);
         ctx->apiSocket.lowest_layer().set_option(asio::socket_base::keep_alive(true));
 
@@ -104,8 +106,8 @@ static ut::Task<void> asyncFlickrDownload(const std::vector<std::string>& tags,
                 printf("-> starting query (got %d photos in queue, need %d)...\n",
                     (int) photoQueue.size(), totalPicsRemaining);
 
-                ctx->querySlot.task = util::asyncHttpGet(ctx->apiSocket, ctx->querySlot.buf, ctx,
-                    queryUrl.host, queryUrl.path, true);
+                ctx->querySlot.task = asio::asyncHttpGet(ctx->apiSocket, ctx->querySlot.buf,
+                    queryUrl.host, queryUrl.path, true, ctx);
                 numActiveTransfers++;
             }
 
@@ -122,8 +124,8 @@ static ut::Task<void> asyncFlickrDownload(const std::vector<std::string>& tags,
                     printf("-> [%d] downloading %s%s...\n",
                         ctx->indexOf(dlSlot), photoUrl.host.c_str(), photoUrl.path.c_str());
 
-                    dlSlot.task = util::asyncHttpDownload(sIo, dlSlot.buf, ctx,
-                        photoUrl.host, photoUrl.path);
+                    dlSlot.task = asio::asyncHttpDownload(sIo, dlSlot.buf,
+                        photoUrl.host, photoUrl.path, ctx);
                     numActiveTransfers++;
                     totalPicsRemaining--;
                 }

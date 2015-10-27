@@ -23,46 +23,42 @@
 #include <string>
 #include <vector>
 
-namespace util {
+namespace util { namespace flickr {
 
-namespace flickr
+static const std::string FLICKR_API_HOST = "api.flickr.com";
+static const std::string FLICKR_API_KEY = "e36784df8a03fea04c22ed93318b291c";
+
+struct FlickrPhoto
 {
-    static const std::string FLICKR_API_HOST = "api.flickr.com";
-    static const std::string FLICKR_API_KEY = "e36784df8a03fea04c22ed93318b291c";
+    std::string id;
+    std::string owner;
+    std::string secret;
+    std::string server;
+    std::string farm;
+    std::string title;
+};
 
-    struct FlickrPhoto
-    {
-        std::string id;
-        std::string owner;
-        std::string secret;
-        std::string server;
-        std::string farm;
-        std::string title;
-    };
+struct FlickrPhotos
+{
+    int page;
+    int pages;
+    int perPage;
+    int total;
+    std::vector<FlickrPhoto> photos;
+};
 
-    struct FlickrPhotos
-    {
-        int page;
-        int pages;
-        int perPage;
-        int total;
-        std::vector<FlickrPhoto> photos;
-    };
+struct Url
+{
+    std::string host;
+    std::string path;
+};
 
-    struct Url
-    {
-        std::string host;
-        std::string path;
-    };
+Url makeFlickrQueryUrl(const std::vector<std::string>& tags, int perPage, int page);
 
-    Url makeFlickrQueryUrl(const std::vector<std::string>& tags, int perPage, int page);
+Url makeFlickrPhotoUrl(const FlickrPhoto& photo);
 
-    Url makeFlickrPhotoUrl(const FlickrPhoto& photo);
+FlickrPhotos parseFlickrResponse(boost::asio::streambuf& response);
 
-    FlickrPhotos parseFlickrResponse(boost::asio::streambuf& response);
-
-}
-
-}
+} } // util::flickr
 
 #endif // HAVE_BOOST

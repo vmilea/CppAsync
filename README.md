@@ -6,20 +6,19 @@
 ## Bullet points
 
 * Portable C++11 library
+* Provides asymmetrical coroutines.
 * Enables async/await pattern.
 * Helps you write clean, efficient, composable async code.
-* Await user defined types, like custom Futures!
-* Provides asymmetrical coroutines.
-* Can use several coroutine back-ends (Duff / Boost.Context / C++17 resumable functions).
+* Await user defined types such as custom Futures!
+* Frictionless integration with existing libraries like Boost.Asio
 * Works with any kind of event loop (Qt / Boost.Asio / libuv etc.)
+* Can use several coroutine back-ends (Duff / Boost.Context / C++17 resumable functions).
 * Header only, zero external dependencies (optional stackful coroutines via Boost.Context)
-* Easy to understand samples
 * Full support for exceptions in coroutines
-* Efficient implementation
-* Custom allocators support
 * Applicable in projects where exceptions are prohibited (embedded friendly)
-* Boost.Asio wrappers for convenience
-
+* Custom allocators support
+* Efficient implementation
+* Easy to understand samples
 
 ## Pitch
 
@@ -143,14 +142,14 @@ ut::Task<tcp::endpoint> asyncResolveAndConnect(
     return startAsync([&socket, query]() -> tcp::endpoint {
         tcp::resolver resolver(socket.get_io_service());
 
-        auto resolveTask = asyncResolve(resolver, query);
+        auto resolveTask = resolver.async_resolve(query, asio::asTask);
 
         // Suspends coroutine until task has finished.
         auto it = await_(resolveTask);
 
         for (; it != tcp::resolver::iterator(); ++it) {
             tcp::endpoint ep = *it;
-            auto connectTask = asyncConnect(socket, ep);
+            auto connectTask = socket.async_connect(ep, asio::asTask);
 
             try {
                 // Suspends coroutine until task has finished.
@@ -185,13 +184,13 @@ ut::Task<tcp::endpoint> asyncResolveAndConnect(
             // Body must be wrapped betweeen ut_begin() .. ut_end() macros.
             ut_begin();
 
-            resolveTask = asyncResolve(resolver, query);
+            resolveTask = resolver.async_resolve(query, asio::asTask);
 
             // Suspends coroutine until task has finished.
             ut_await_(resolveTask);
 
             for (it = resolveTask.get(); it != tcp::resolver::iterator(); ++it) {
-                connectTask = asyncConnect(socket, *it);
+                connectTask = socket.async_connect(*it, asio::asTask);
 
                 ut_try {
                     // Suspends coroutine until task has finished.

@@ -20,8 +20,8 @@
 
 #include "Common.h"
 #include "util/IO.h"
-#include <CppAsync/AsioWrappers.h>
 #include <CppAsync/StacklessAsync.h>
+#include <CppAsync/asio/Asio.h>
 #include <CppAsync/util/StringUtil.h>
 #include <cstdio>
 #include <chrono>
@@ -31,7 +31,10 @@
 
 namespace {
 
-namespace asio = boost::asio;
+namespace asio {
+    using namespace boost::asio;
+    using namespace ut::asio;
+}
 using asio::ip::tcp;
 
 static asio::io_service sIo;
@@ -93,13 +96,13 @@ private:
         ut::AwaitableBase *doneAwt = nullptr;
         ut_begin_function(coroState);
 
-        mConnectTask = ut::asyncResolveAndConnect(mCtx->socket, mCtx, mQuery);
+        mConnectTask = asio::asyncResolveAndConnect(mCtx->socket, mQuery, mCtx);
         // Suspend until connected to server.
         ut_await_(mConnectTask);
 
         // Suspend until we've introduced self.
         mCtx->msg = mNickname + "\n";
-        mWriteTask = ut::asyncWrite(mCtx->socket, asio::buffer(mCtx->msg), mCtx);
+        mWriteTask = asio::async_write(mCtx->socket, asio::buffer(mCtx->msg), asio::asTask[mCtx]);
         ut_await_(mWriteTask);
 
         // Start input loop.
@@ -123,7 +126,8 @@ private:
 
         do {
             // Suspend until a message has been read.
-            mReadTask = ut::asyncReadUntil(mCtx->socket, mCtx->buf, mCtx, std::string("\n"));
+            mReadTask = asio::async_read_until(mCtx->socket, mCtx->buf, std::string("\n"),
+                asio::asTask[mCtx]);
             ut_await_(mReadTask);
 
             std::getline(std::istream(&mCtx->buf), line);
@@ -150,7 +154,8 @@ private:
                 mMsgQueue.pop_front();
 
                 // Suspend until message has been sent.
-                mWriteTask = ut::asyncWrite(mCtx->socket, asio::buffer(mCtx->msg), mCtx);
+                mWriteTask = asio::async_write(mCtx->socket, asio::buffer(mCtx->msg),
+                    asio::asTask[mCtx]);
                 ut_await_(mWriteTask);
 
                 if (mCtx->msg == "/leave\n")

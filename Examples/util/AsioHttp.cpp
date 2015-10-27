@@ -18,30 +18,32 @@
 
 #include "AsioHttp.h"
 #include <CppAsync/util/StringUtil.h>
-#include <CppAsync/util/Optional.h>
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
 #include <iostream>
 
-namespace util {
+using namespace boost::asio;
+using namespace ut::asio;
+
+namespace util { namespace asio {
 
 namespace detail
 {
     template <class Socket>
     struct HttpGetFrame : ut::AsyncFrame<size_t>
     {
-        HttpGetFrame(Socket& socket, asio::streambuf& outBuf,
-            const ut::ContextRef<void>& ctx,
+        HttpGetFrame(Socket& socket, streambuf& outBuf,
             const std::string& host, const std::string& path,
-            bool persistentConnection, bool readAll)
+            bool persistentConnection, bool readAll,
+            const ut::ContextRef<void>& ctx)
             : socket(socket)
             , outBuf(outBuf)
-            , ctx(ctx.template spawn<Context>())
             , host(host)
             , path(path)
             , persistentConnection(persistentConnection)
             , readAll(readAll)
-            , responseStream(&outBuf) { }
+            , responseStream(&outBuf)
+            , ctx(ctx.template spawn<Context>()) { }
 
         void operator()()
         {
@@ -62,11 +64,11 @@ namespace detail
                 requestStream << "\r\n";
             }
 
-            subtask = ut::asyncWrite(socket, ctx->requestBuf, ctx);
+            subtask = async_write(socket, ctx->requestBuf, asTask[ctx]);
             ut_await_(subtask);
 
             // Read response - HTTP status.
-            subtask = ut::asyncReadUntil(socket, outBuf, ctx, std::string("\r\n"));
+            subtask = async_read_until(socket, outBuf, std::string("\r\n"), asTask[ctx]);
             ut_await_(subtask);
 
             {
@@ -85,7 +87,8 @@ namespace detail
             }
 
             // Read response headers.
-            subtask = asyncReadUntil(socket, outBuf, ctx, std::string("\r\n\r\n"));
+            subtask = async_read_until(socket, outBuf, std::string("\r\n\r\n"),
+                asTask[ctx]);
             ut_await_(subtask);
 
             {
@@ -104,8 +107,7 @@ namespace detail
 
             if (readAll) {
                 size_t remainingSize = contentLength - outBuf.size();
-                subtask = asyncRead(socket, outBuf, ctx,
-                    asio::transfer_exactly(remainingSize));
+                subtask = async_read(socket, outBuf, transfer_exactly(remainingSize), asTask[ctx]);
             }
             ut_await_(subtask);
 
@@ -116,40 +118,41 @@ namespace detail
     private:
         struct Context
         {
-            asio::streambuf requestBuf;
+            streambuf requestBuf;
         };
 
         Socket& socket;
-        asio::streambuf& outBuf;
-        ut::ContextRef<Context> ctx;
+        streambuf& outBuf;
         const std::string host;
         const std::string path;
         const bool persistentConnection;
         const bool readAll;
         std::istream responseStream;
         size_t contentLength;
+        ut::ContextRef<Context> ctx;
+
         ut::Task<size_t> subtask;
     };
 
     struct HttpDownloadFrame : ut::AsyncFrame<size_t>
     {
-        HttpDownloadFrame(asio::io_service& io, asio::streambuf& outBuf,
-            const ut::ContextRef<void>& ctx,
-            const std::string& host, const std::string& path)
+        HttpDownloadFrame(io_service& io, streambuf& outBuf,
+            const std::string& host, const std::string& path,
+            const ut::ContextRef<void>& ctx)
             : outBuf(outBuf)
-            , ctx(ctx.template spawn<Context>(io))
             , host(host)
-            , path(path) { }
+            , path(path)
+            , ctx(ctx.template spawn<Context>(io)) { }
 
         void operator()()
         {
             ut_begin();
 
-            connectTask = ut::asyncResolveAndConnect(ctx->socket, ctx,
-                    asio::ip::tcp::resolver::query(host, "http"));
+            connectTask = asyncResolveAndConnect(ctx->socket,
+                ip::tcp::resolver::query(host, "http"), ctx);
             ut_await_(connectTask);
 
-            downloadTask = asyncHttpGet(ctx->socket, outBuf, ctx, host, path, false);
+            downloadTask = asyncHttpGet(ctx->socket, outBuf, host, path, false, ctx);
             ut_await_(downloadTask);
 
             ut_return(downloadTask.get());
@@ -159,56 +162,58 @@ namespace detail
     private:
         struct Context
         {
-            asio::ip::tcp::socket socket;
+            ip::tcp::socket socket;
 
-            Context(asio::io_service& io)
+            Context(io_service& io)
                 : socket(io) { }
         };
 
-        asio::streambuf& outBuf;
-        ut::ContextRef<Context> ctx;
+        streambuf& outBuf;
         const std::string host;
         const std::string path;
-        ut::Task<asio::ip::tcp::endpoint> connectTask;
+        ut::ContextRef<Context> ctx;
+
+        ut::Task<ip::tcp::endpoint> connectTask;
         ut::Task<size_t> downloadTask;
     };
 
     template <>
-    ut::Task<size_t> asyncHttpGetImpl<asio::ip::tcp::socket>(
-        asio::ip::tcp::socket& socket, asio::streambuf& outBuf,
-        const ut::ContextRef<void>& ctx,
-        const std::string& host, const std::string& path, bool persistentConnection, bool readAll)
+    ut::Task<size_t> asyncHttpGetImpl<ip::tcp::socket>(
+        ip::tcp::socket& socket, streambuf& outBuf,
+        const std::string& host, const std::string& path,
+        bool persistentConnection, bool readAll,
+        const ut::ContextRef<void>& ctx)
     {
-        using frame_type = detail::HttpGetFrame<asio::ip::tcp::socket>;
+        using frame_type = detail::HttpGetFrame<ip::tcp::socket>;
 
-        return ut::startAsyncOf<frame_type>(socket, outBuf, ctx,
-            host, path, persistentConnection, readAll);
+        return ut::startAsyncOf<frame_type>(socket, outBuf,
+            host, path, persistentConnection, readAll, ctx);
     }
 
 #ifdef HAVE_OPENSSL
 
-    struct HttpsClientConnectFrame : ut::AsyncFrame<asio::ip::tcp::endpoint>
+    struct HttpsClientConnectFrame : ut::AsyncFrame<ip::tcp::endpoint>
     {
-        using socket_type = asio::ssl::stream<asio::ip::tcp::socket>;
+        using socket_type = ssl::stream<ip::tcp::socket>;
 
         HttpsClientConnectFrame(socket_type& socket,
-            const ut::ContextRef<void>& ctx,
-            const std::string& host)
+            const std::string& host,
+            const ut::ContextRef<void>& ctx)
             : socket(socket)
-            , ctx(ctx)
-            , host(host) { }
+            , host(host)
+            , ctx(ctx) { }
 
         void operator()()
         {
             ut_begin();
 
-            connectTask = asyncResolveAndConnect(socket.lowest_layer(), ctx,
-                asio::ip::tcp::resolver::query(host, "https"));
+            connectTask = asyncResolveAndConnect(socket.lowest_layer(),
+                ip::tcp::resolver::query(host, "https"), ctx);
             ut_await_(connectTask);
 
-            socket.lowest_layer().set_option(asio::ip::tcp::no_delay(true));
+            socket.lowest_layer().set_option(ip::tcp::no_delay(true));
 
-            handshakeTask = asyncHandshake(socket, ctx, socket_type::client);
+            handshakeTask = socket.async_handshake(socket_type::client, asTask[ctx]);
             ut_await_(handshakeTask);
 
             ut_return(connectTask.get());
@@ -217,31 +222,32 @@ namespace detail
 
     private:
         socket_type& socket;
-        ut::ContextRef<void> ctx;
         const std::string host;
-        ut::Task<asio::ip::tcp::endpoint> connectTask;
+        ut::ContextRef<void> ctx;
+
+        ut::Task<ip::tcp::endpoint> connectTask;
         ut::Task<void> handshakeTask;
     };
 
     struct HttpsDownloadFrame : ut::AsyncFrame<size_t>
     {
-        HttpsDownloadFrame(asio::io_service& io, asio::streambuf& outBuf,
-            const ut::ContextRef<void>& ctx,
-            asio::ssl::context_base::method sslVersion,
-            const std::string& host, const std::string& path)
+        HttpsDownloadFrame(io_service& io, streambuf& outBuf,
+            ssl::context_base::method sslVersion,
+            const std::string& host, const std::string& path,
+            const ut::ContextRef<void>& ctx)
             : outBuf(outBuf)
-            , ctx(ctx.template spawn<Context>(io, sslVersion))
             , host(host)
-            , path(path) { }
+            , path(path)
+            , ctx(ctx.template spawn<Context>(io, sslVersion)) { }
 
         void operator()()
         {
             ut_begin();
 
-            connectTask = asyncHttpsClientConnect(ctx->socket, ctx, host);
+            connectTask = asyncHttpsClientConnect(ctx->socket, host, ctx);
             ut_await_(connectTask);
 
-            downloadTask = asyncHttpGet(ctx->socket, outBuf, ctx, host, path, false);
+            downloadTask = asyncHttpGet(ctx->socket, outBuf, host, path, false, ctx);
             ut_await_(downloadTask);
 
             ut_return(downloadTask.get());
@@ -249,82 +255,77 @@ namespace detail
         }
 
     private:
-        using socket_type = asio::ssl::stream<asio::ip::tcp::socket>;
+        using socket_type = ssl::stream<ip::tcp::socket>;
 
         struct Context
         {
-            asio::ssl::context sslContext;
+            ssl::context sslContext;
             socket_type socket;
 
-            Context(asio::io_service& io, asio::ssl::context_base::method sslVersion)
+            Context(io_service& io, ssl::context_base::method sslVersion)
                 : sslContext(sslVersion)
                 , socket(io, sslContext) { }
         };
 
-        asio::streambuf& outBuf;
-        ut::ContextRef<Context> ctx;
+        streambuf& outBuf;
         const std::string host;
         const std::string path;
-        ut::Task<asio::ip::tcp::endpoint> connectTask;
+        ut::ContextRef<Context> ctx;
+
+        ut::Task<ip::tcp::endpoint> connectTask;
         ut::Task<size_t> downloadTask;
     };
 
     template <>
-    ut::Task<size_t> asyncHttpGetImpl<asio::ssl::stream<asio::ip::tcp::socket>>(
-        asio::ssl::stream<asio::ip::tcp::socket>& socket, asio::streambuf& outBuf,
-        const ut::ContextRef<void>& ctx,
-        const std::string& host, const std::string& path, bool persistentConnection, bool readAll)
+    ut::Task<size_t> asyncHttpGetImpl<ssl::stream<ip::tcp::socket>>(
+        ssl::stream<ip::tcp::socket>& socket, streambuf& outBuf,
+        const std::string& host, const std::string& path, bool persistentConnection, bool readAll,
+        const ut::ContextRef<void>& ctx)
     {
-        using frame_type = detail::HttpGetFrame<asio::ssl::stream<asio::ip::tcp::socket>>;
+        using frame_type = detail::HttpGetFrame<ssl::stream<ip::tcp::socket>>;
 
-        return ut::startAsyncOf<frame_type>(socket, outBuf, ctx,
-            host, path, persistentConnection, readAll);
+        return ut::startAsyncOf<frame_type>(socket, outBuf,
+            host, path, persistentConnection, readAll, ctx);
     }
 
 #endif
 }
 
-ut::Task<size_t> asyncHttpDownload(asio::io_service& io, asio::streambuf& outBuf,
-    const ut::ContextRef<void>& ctx,
-    const std::string& host, const std::string& path)
+ut::Task<size_t> asyncHttpDownload(
+    io_service& io, streambuf& outBuf,
+    const std::string& host, const std::string& path,
+    const ut::ContextRef<void>& ctx)
 {
     using frame_type = detail::HttpDownloadFrame;
 
-    return ut::startAsyncOf<frame_type>(io, outBuf, ctx, host, path);
+    return ut::startAsyncOf<frame_type>(io, outBuf, host, path, ctx);
 }
 
 #ifdef HAVE_OPENSSL
 
-ut::Task<asio::ip::tcp::endpoint> asyncHttpsClientConnect(
-    asio::ssl::stream<asio::ip::tcp::socket>& socket,
-    const ut::ContextRef<void>& ctx,
-    const std::string& host)
+ut::Task<ip::tcp::endpoint> asyncHttpsClientConnect(
+    ssl::stream<ip::tcp::socket>& socket,
+    const std::string& host,
+    const ut::ContextRef<void>& ctx)
 {
     using frame_type = detail::HttpsClientConnectFrame;
 
-    return ut::startAsyncOf<frame_type>(socket, ctx, host);
+    return ut::startAsyncOf<frame_type>(socket, host, ctx);
 }
 
-ut::Task<size_t> asyncHttpsDownload(asio::io_service& io, asio::streambuf& outBuf,
-    const ut::ContextRef<void>& ctx,
-    asio::ssl::context_base::method sslVersion,
-    const std::string& host, const std::string& path)
+ut::Task<size_t> asyncHttpsDownload(
+    io_service& io, streambuf& outBuf,
+    ssl::context_base::method sslVersion,
+    const std::string& host, const std::string& path,
+    const ut::ContextRef<void>& ctx)
 {
     using frame_type = detail::HttpsDownloadFrame;
 
-    return ut::startAsyncOf<frame_type>(io, outBuf, ctx, sslVersion, host, path);
-}
-
-ut::Task<void> asyncShutdown(asio::ssl::stream<asio::ip::tcp::socket>& socket,
-    const ut::ContextRef<void>& ctx)
-{
-    ut::Task<void> task;
-    socket.async_shutdown(ut::makeAsioHandler(task, ctx));
-    return task;
+    return ut::startAsyncOf<frame_type>(io, outBuf, sslVersion, host, path, ctx);
 }
 
 #endif // HAVE_OPENSSL
 
-}
+} } // util::asio
 
 #endif // HAVE_BOOST
