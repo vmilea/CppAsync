@@ -55,10 +55,10 @@ static ut::Task<void> asyncHttpDownload(asio::streambuf& outBuf, std::string hos
         auto resolveTask = ctx->resolver.async_resolve(
                 asio::ip::tcp::resolver::query(host, "http"),
                 asio::asTask[ctx]);
-        ut::stackful::await_(resolveTask);
+        auto endpoints = ut::stackful::await_(resolveTask);
 
         // Compound operations can be abstracted as subtasks.
-        auto connectTask = asio::asyncConnectToAny(ctx->socket, resolveTask.get(), ctx);
+        auto connectTask = asio::asyncConnectToAny(ctx->socket, endpoints, ctx);
         ut::stackful::await_(connectTask);
 
         auto downloadTask = asio::asyncHttpGet(ctx->socket, outBuf, host, path, false, ctx);
