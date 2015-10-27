@@ -26,17 +26,27 @@ namespace ut {
 
 namespace detail
 {
+    template <class R, class It>
+    void completeCombinator(Promise<R>&& promise, It pos, It /* last */)
+    {
+        promise.complete(pos);
+    }
+
+    template <class It>
+    void completeCombinator(Promise<AwaitableBase*>&& promise, It pos, It last)
+    {
+        promise.complete(pos == last ? nullptr : *pos);
+    }
+
     //
     // AnyAwaiter
     //
 
-    template <class Container>
+    template <class R, class Container>
     struct AnyAwaiter : Awaiter
     {
-        using iterator_type = IteratorOf<Container>;
-
         Container awts;
-        Instance<Promise<iterator_type>> promise;
+        Instance<Promise<R>> promise;
 
         AnyAwaiter(Container&& awts)
             : awts(std::move(awts))
@@ -82,7 +92,7 @@ namespace detail
                         ut_assert(!awt->isReady() && awt->awaiter() == this);
                         awt->setAwaiter(nullptr);
                     }
-                    promise->complete(pos);
+                    completeCombinator(std::move(*promise), pos, range.last);
                     return;
                 } else {
                     ut_assert(!awt->isReady() && awt->awaiter() == this);
@@ -94,11 +104,9 @@ namespace detail
         }
     };
 
-    template <class Container, class Alloc>
-    Task<IteratorOf<Container>> whenAnyImpl(const Alloc& alloc, Container&& awts)
+    template <class R, class Container, class Alloc>
+    Task<R> whenAnyImpl(const Alloc& alloc, Container&& awts)
     {
-        using iterator_type = IteratorOf<Container>;
-
         using namespace detail::ops;
 
         static_assert(IsIterable<Container>::value,
@@ -109,17 +117,20 @@ namespace detail
 
         auto range = makeRange(awts);
         auto pos = rFind<isReady>(range);
-        if (pos != range.last)
-            return makeCompletedTask<iterator_type>(pos);
+        if (pos != range.last) {
+            Task<R> task;
+            completeCombinator(task.takePromise(), pos, range.last);
+            return task;
+        }
 
-        using awaiter_handle_type = AllocElementPtr<detail::AnyAwaiter<Container>, Alloc>;
-        using listener_type = detail::BoundResourceListener<iterator_type, awaiter_handle_type>;
+        using awaiter_handle_type = AllocElementPtr<detail::AnyAwaiter<R, Container>, Alloc>;
+        using listener_type = detail::BoundResourceListener<R, awaiter_handle_type>;
 
         awaiter_handle_type handle(alloc, std::move(awts));
 
 #ifdef UT_NO_EXCEPTIONS
         if (handle == nullptr) {
-            Task<iterator_type> task;
+            Task<R> task;
             task.takePromise();
             return task; // Return invalid task.
         }
@@ -136,14 +147,12 @@ namespace detail
     // SomeAwaiter
     //
 
-    template <class Container>
+    template <class R, class Container>
     struct SomeAwaiter : Awaiter
     {
-        using iterator_type = IteratorOf<Container>;
-
         Container awts;
         std::size_t count;
-        Instance<Promise<iterator_type>> promise;
+        Instance<Promise<R>> promise;
 
         SomeAwaiter(std::size_t count, Container&& awts)
             : awts(std::move(awts))
@@ -198,7 +207,7 @@ namespace detail
                                 awt->setAwaiter(nullptr);
                             }
                         }
-                        promise->complete(pos);
+                        completeCombinator(std::move(*promise), pos, range.last);
                         return;
                     }
 
@@ -218,17 +227,15 @@ namespace detail
                         awt.setAwaiter(nullptr);
                     }
                 }
-                promise->complete(range.last);
+                completeCombinator(std::move(*promise), range.last, range.last);
             }
         }
     };
 
-    template <class Container, class Alloc>
-    Task<IteratorOf<Container>> whenSomeImpl(const Alloc& alloc,
+    template <class R, class Container, class Alloc>
+    Task<R> whenSomeImpl(const Alloc& alloc,
         std::size_t count, Container&& awts)
     {
-        using iterator_type = IteratorOf<Container>;
-
         using namespace detail::ops;
 
         static_assert(std::is_rvalue_reference<Container&&>::value, "");
@@ -245,25 +252,31 @@ namespace detail
             AwaitableBase& awt = selectAwaitable(*it);
 
             if (awt.isReady()) {
-                if (awt.hasError())
-                    return makeCompletedTask<iterator_type>(it);
+                if (awt.hasError()) {
+                    Task<R> task;
+                    completeCombinator(task.takePromise(), it, range.last);
+                    return task;
+                }
 
                 if (count > 0)
                     count--;
             }
         }
 
-        if (count == 0)
-            return makeCompletedTask<iterator_type>(range.last);
+        if (count == 0) {
+            Task<R> task;
+            completeCombinator(task.takePromise(), range.last, range.last);
+            return task;
+        }
 
-        using awaiter_handle_type = AllocElementPtr<detail::SomeAwaiter<Container>, Alloc>;
-        using listener_type = detail::BoundResourceListener<iterator_type, awaiter_handle_type>;
+        using awaiter_handle_type = AllocElementPtr<detail::SomeAwaiter<R, Container>, Alloc>;
+        using listener_type = detail::BoundResourceListener<R, awaiter_handle_type>;
 
         awaiter_handle_type handle(alloc, count, std::move(awts));
 
 #ifdef UT_NO_EXCEPTIONS
         if (handle == nullptr) {
-            Task<iterator_type> task;
+            Task<R> task;
             task.takePromise();
             return task; // Return invalid task.
         }
@@ -284,22 +297,24 @@ namespace detail
 template <class It, class Alloc>
 Task<It> whenAny(const Alloc& alloc, Range<It> awts)
 {
-    return detail::whenAnyImpl(alloc, std::move(awts));
+    return detail::whenAnyImpl<It>(alloc, std::move(awts));
 }
 
 template <class It>
 Task<It> whenAny(Range<It> awts)
 {
-    return detail::whenAnyImpl(std::allocator<char>(), std::move(awts));
+    return detail::whenAnyImpl<It>(std::allocator<char>(), std::move(awts));
 }
 
-template <class Container, class Alloc>
+template <class Container, class Alloc,
+    EnableIf<IsIterable<Container>::value> = nullptr>
 Task<IteratorOf<Container>> whenAny(const Alloc& alloc, Container& awts)
 {
     return whenAny(alloc, makeRange(awts));
 }
 
-template <class Container>
+template <class Container,
+    EnableIf<IsIterable<Container>::value> = nullptr>
 Task<IteratorOf<Container>> whenAny(Container& awts)
 {
     return whenAny(makeRange(awts));
@@ -313,18 +328,15 @@ Task<AwaitableBase*> whenAny(const Alloc& alloc,
     static_assert(None<std::is_const<Awaitables>...>::value,
         "Expecting non-const lvalue references to Awaitables");
 
-    static const std::size_t count = 2 + sizeof...(Awaitables);
+    static const std::size_t total = 2 + sizeof...(Awaitables);
 
-    std::array<AwaitableBase*, count> list { { &first, &second, &rest... } };
-    return detail::whenAnyImpl(alloc, std::move(list));
+    std::array<AwaitableBase*, total> list { { &first, &second, &rest... } };
+    return detail::whenAnyImpl<AwaitableBase*>(alloc, std::move(list));
 }
 
 template <class ...Awaitables>
 Task<AwaitableBase*> whenAny(AwaitableBase& first, AwaitableBase& second, Awaitables&... rest)
 {
-    static_assert(None<std::is_const<Awaitables>...>::value,
-        "Expecting non-const lvalue references to Awaitables");
-
     return whenAny(std::allocator<char>(), first, second, rest...);
 }
 
@@ -335,25 +347,47 @@ Task<AwaitableBase*> whenAny(AwaitableBase& first, AwaitableBase& second, Awaita
 template <class It, class Alloc>
 Task<It> whenSome(const Alloc& alloc, std::size_t count, Range<It> awts)
 {
-    return detail::whenSomeImpl(alloc, count, std::move(awts));
+    return detail::whenSomeImpl<It>(alloc, count, std::move(awts));
 }
 
 template <class It>
 Task<It> whenSome(std::size_t count, Range<It> awts)
 {
-    return detail::whenSomeImpl(std::allocator<char>(), count, std::move(awts));
+    return detail::whenSomeImpl<It>(std::allocator<char>(), count, std::move(awts));
 }
 
-template <class Container, class Alloc>
+template <class Container, class Alloc,
+    EnableIf<IsIterable<Container>::value> = nullptr>
 Task<IteratorOf<Container>> whenSome(const Alloc& alloc, std::size_t count, Container& awts)
 {
     return whenSome(alloc, count, makeRange(awts));
 }
 
-template <class Container>
+template <class Container,
+    EnableIf<IsIterable<Container>::value> = nullptr>
 Task<IteratorOf<Container>> whenSome(std::size_t count, Container& awts)
 {
     return whenSome(count, makeRange(awts));
+}
+
+template <class ...Awaitables, class Alloc>
+Task<AwaitableBase*> whenSome(const Alloc& alloc, std::size_t count,
+    AwaitableBase& first, AwaitableBase& second, Awaitables&... rest)
+{
+    static_assert(None<std::is_const<Awaitables>...>::value,
+        "Expecting non-const lvalue references to Awaitables");
+
+    static const std::size_t total = 2 + sizeof...(Awaitables);
+
+    std::array<AwaitableBase*, total> list { { &first, &second, &rest... } };
+    return detail::whenSomeImpl<AwaitableBase*>(alloc, count, std::move(list));
+}
+
+template <class ...Awaitables>
+Task<AwaitableBase*> whenSome(std::size_t count,
+    AwaitableBase& first, AwaitableBase& second, Awaitables&... rest)
+{
+    return whenSome(std::allocator<char>(), count, first, second, rest...);
 }
 
 //
@@ -363,22 +397,24 @@ Task<IteratorOf<Container>> whenSome(std::size_t count, Container& awts)
 template <class It, class Alloc>
 Task<It> whenAll(const Alloc& alloc, Range<It> awts)
 {
-    return detail::whenSomeImpl(alloc, awts.length(), std::move(awts));
+    return detail::whenSomeImpl<It>(alloc, awts.length(), std::move(awts));
 }
 
 template <class It>
 Task<It> whenAll(Range<It> awts)
 {
-    return detail::whenSomeImpl(std::allocator<char>(), awts.length(), std::move(awts));
+    return detail::whenSomeImpl<It>(std::allocator<char>(), awts.length(), std::move(awts));
 }
 
-template <class Container, class Alloc>
+template <class Container, class Alloc,
+    EnableIf<IsIterable<Container>::value> = nullptr>
 Task<IteratorOf<Container>> whenAll(const Alloc& alloc, Container& awts)
 {
     return whenAll(alloc, makeRange(awts));
 }
 
-template <class Container>
+template <class Container,
+    EnableIf<IsIterable<Container>::value> = nullptr>
 Task<IteratorOf<Container>> whenAll(Container& awts)
 {
     return whenAll(makeRange(awts));
@@ -392,18 +428,15 @@ Task<AwaitableBase*> whenAll(const Alloc& alloc,
     static_assert(None<std::is_const<Awaitables>...>::value,
         "Expecting non-const lvalue references to Awaitables");
 
-    static const std::size_t count = 2 + sizeof...(Awaitables);
+    static const std::size_t total = 2 + sizeof...(Awaitables);
 
-    std::array<AwaitableBase*, count> list { { &first, &second, &rest... } };
-    return whenSome(alloc, count, list);
+    std::array<AwaitableBase*, total> list { { &first, &second, &rest... } };
+    return detail::whenSomeImpl<AwaitableBase*>(alloc, total, std::move(list));
 }
 
 template <class ...Awaitables>
 Task<AwaitableBase*> whenAll(AwaitableBase& first, AwaitableBase& second, Awaitables&... rest)
 {
-    static_assert(None<std::is_const<Awaitables>...>::value,
-        "Expecting non-const lvalue references to Awaitables");
-
     return whenAll(std::allocator<char>(), first, second, rest...);
 }
 
