@@ -819,6 +819,40 @@ Task<R> makeTaskWithResource(T resource) _ut_noexcept
 }
 
 //
+// Lightweight type erasure for awaitables. The awaitable object is passed by reference and must
+// remain valid until the operation completes or is canceled. Calling task.cancel() or deleting /
+// overwriting the task object before completion will trigger the cancellationHandler.
+//
+
+template <class Awaitable, class CancellationHandler, class Alloc>
+Task<AwaitableResult<Awaitable>> asTask(std::allocator_arg_t, const Alloc& alloc, Awaitable& awt,
+    CancellationHandler cancellationHandler)
+{
+    return detail::asTaskImpl(std::allocator_arg, alloc, awt, std::move(cancellationHandler));
+}
+
+template <class Awaitable, class Alloc>
+Task<AwaitableResult<Awaitable>> asTask(std::allocator_arg_t, const Alloc& alloc, Awaitable& awt)
+{
+    return detail::asTaskImpl(std::allocator_arg, alloc, awt,
+        detail::IgnoreCancellation<Awaitable>());
+}
+
+template <class Awaitable, class CancellationHandler>
+Task<AwaitableResult<Awaitable>> asTask(Awaitable& awt, CancellationHandler cancellationHandler)
+{
+    return detail::asTaskImpl(std::allocator_arg, std::allocator<char>(), awt,
+        std::move(cancellationHandler));
+}
+
+template <class Awaitable>
+Task<AwaitableResult<Awaitable>> asTask(Awaitable& awt)
+{
+    return detail::asTaskImpl(std::allocator_arg, std::allocator<char>(), awt,
+        detail::IgnoreCancellation<Awaitable>());
+}
+
+//
 // Shims
 //
 

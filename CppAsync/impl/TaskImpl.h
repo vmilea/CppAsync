@@ -18,6 +18,8 @@
 
 #include "Common.h"
 #include "Assert.h"
+#include "../util/AllocElementPtr.h"
+#include "../util/Instance.h"
 #include "../util/Misc.h"
 #include "../util/TypeTraits.h"
 
@@ -134,6 +136,130 @@ namespace detail
 
     template <class R, class T>
     using TaskMaster = BoundResourceListener<R, T, DetachByReleasing<T>, GenericReset<T>>;
+
+    //
+    // Type erasure for awaitables
+    //
+
+    template <class Awaitable>
+    struct IgnoreCancellation
+    {
+        void operator()(Awaitable& /* awt */) _ut_noexcept { }
+    };
+
+    template <class Awaitable, class CancellationHandler>
+    class AsTaskWrapper
+        : public Awaiter
+        , private CancellationHandler // Allow empty base class optimization.
+    {
+        using result_type = AwaitableResult<Awaitable>;
+        using promise_type = Promise<result_type>;
+
+    public:
+        AsTaskWrapper(Awaitable& core, CancellationHandler&& cancellationHandler) _ut_noexcept
+            : CancellationHandler(std::move(cancellationHandler))
+            , mCore(core)
+        {
+            ut_assert(!awaitable::isReady(mCore));
+            awaitable::setAwaiter(mCore, this);
+        }
+
+        void initialize(promise_type&& promise) _ut_noexcept
+        {
+            mPromise.initialize(std::move(promise));
+        }
+
+        ~AsTaskWrapper() _ut_noexcept final
+        {
+            if (mPromise->state() == promise_type::ST_OpCanceled)
+                (*this)(mCore);
+        }
+
+        void resume(AwaitableBase *resumer) _ut_noexcept final
+        {
+            ut_assert(resumer == &mCore);
+            ut_assert(awaitable::isReady(mCore));
+
+            if (awaitable::hasError(mCore))
+                mPromise->fail(awaitable::takeError(mCore));
+            else
+                complete<result_type>();
+        }
+
+    private:
+        AsTaskWrapper(const AsTaskWrapper& other) = delete;
+        AsTaskWrapper& operator=(const AsTaskWrapper& other) = delete;
+
+        template <class U, EnableIfVoid<U> = nullptr>
+        void complete() _ut_noexcept
+        {
+            mPromise->complete();
+        }
+
+        template <class U, DisableIfVoid<U> = nullptr>
+        void complete() _ut_noexcept
+        {
+            mPromise->complete(awaitable::takeResult(mCore));
+        }
+
+        Instance<promise_type> mPromise;
+        Awaitable& mCore;
+    };
+
+    template <class R, class Awaitable, EnableIfVoid<R> = nullptr>
+    void loadResult(Promise<R>&& promise, Awaitable& awt)
+    {
+        ut_assert(detail::awaitable::isReady(awt));
+
+        if (detail::awaitable::hasError(awt))
+            promise.fail(detail::awaitable::takeError(awt));
+        else
+            promise.complete();
+    }
+
+    template <class R, class Awaitable, DisableIfVoid<R> = nullptr>
+    void loadResult(Promise<R>&& promise, Awaitable& awt)
+    {
+        ut_assert(detail::awaitable::isReady(awt));
+
+        if (detail::awaitable::hasError(awt))
+            promise.fail(detail::awaitable::takeError(awt));
+        else
+            promise.complete(detail::awaitable::takeResult(awt));
+    }
+
+    template <class Awaitable, class CancellationHandler, class Alloc>
+    Task<AwaitableResult<Awaitable>> asTaskImpl(std::allocator_arg_t, const Alloc& alloc,
+        Awaitable& awt, CancellationHandler&& cancellationHandler)
+    {
+        using result_type = AwaitableResult<Awaitable>;
+        using awaiter_type = detail::AsTaskWrapper<Awaitable, CancellationHandler>;
+        using awaiter_handle_type = AllocElementPtr<awaiter_type, Alloc>;
+        using listener_type = detail::BoundResourceListener<result_type, awaiter_handle_type>;
+
+        if (detail::awaitable::isReady(awt)) {
+            ut::Task<result_type> task;
+            detail::loadResult(task.takePromise(), awt);
+
+            return task;
+        } else {
+            awaiter_handle_type handle(alloc, awt, std::move(cancellationHandler));
+
+#ifdef UT_NO_EXCEPTIONS
+            if (handle == nullptr) {
+                Task<result_type> task;
+                task.takePromise();
+                return task; // Return invalid task.
+            }
+#endif
+
+            auto task = makeTaskWithListener<listener_type>(std::move(handle));
+            auto& awaiter = *task.template listenerAs<listener_type>().resource;
+            awaiter.initialize(task.takePromise());
+
+            return task;
+        }
+    }
 }
 
 }
