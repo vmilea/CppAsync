@@ -214,7 +214,6 @@ auto startAsyncOf(std::allocator_arg_t, const Alloc& alloc, Args&&... frameArgs)
 
     auto task = makeTaskWithListener<listener_type>(std::move(handle));
     awaiter_type& awaiter = *task.template listenerAs<listener_type>().resource;
-
     awaiter.coroutine.frame().coroState().self = &awaiter;
     awaiter.coroutine.frame().coroState().promise.initialize(task.takePromise());
     awaiter.start();

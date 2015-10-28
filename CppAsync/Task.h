@@ -30,8 +30,21 @@ namespace ut {
 // Fwd declarations
 //
 
+namespace detail
+{
+    template <class Listener>
+    struct TaskListenerTraits;
+}
+
 template <class R = void>
 class Task;
+
+template <class R = void>
+class Promise;
+
+template <class L, class ...Args>
+auto makeTaskWithListener(Args&&... args) _ut_noexcept
+    -> Task<typename detail::TaskListenerTraits<L>::result_type>;
 
 //
 // ITaskListener
@@ -67,9 +80,6 @@ namespace ut {
 //
 // Task
 //
-
-template <class R>
-class Promise;
 
 template <class R>
 class PromiseMixin;
@@ -424,7 +434,7 @@ protected:
     };
 };
 
-template <class R>
+template <class R = void>
 class SharedPromise;
 
 template <class R>

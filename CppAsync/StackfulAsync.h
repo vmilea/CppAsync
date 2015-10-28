@@ -84,7 +84,6 @@ namespace stackful
 
         auto task = makeTaskWithListener<listener_type>(coroutine_type(
             TypeInPlaceTag<function_type>(), std::move(f), stackAllocator));
-
         auto& coroutine = task.template listenerAs<listener_type>().resource;
         auto& awaiter = *static_cast<awaiter_type*>(coroutine.raw().functionPtr()); // safe cast
         awaiter.start(&coroutine.raw(), task.takePromise());

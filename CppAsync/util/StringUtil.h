@@ -101,7 +101,7 @@ inline std::string string_vprintf(const char *format, va_list ap)
     std::vector<char> buf;
     int numChars = safe_vprintf(buf, 0, format, ap);
 
-    return ((numChars < 0) ? "" : std::string(buf.data(), numChars));
+    return (numChars < 0) ? "" : std::string(buf.data(), numChars);
 }
 
 inline std::string string_printf(const char *format, ...)

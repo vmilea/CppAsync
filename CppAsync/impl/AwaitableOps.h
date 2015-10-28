@@ -60,7 +60,7 @@ namespace detail
         template <Predicate F, class ...Awaitables>
         AwaitableBase* find(AwaitableBase& first, Awaitables&... rest)
         {
-            return (F(first))
+            return F(first)
                 ? &first
                 : find<F>(rest...);
         }
@@ -111,9 +111,9 @@ namespace detail
         template <class ...Awaitables>
         bool isAnyOf(AwaitableBase *awt, AwaitableBase& first, Awaitables&... rest)
         {
-            return ((awt == &first)
+            return (awt == &first)
                 ? true
-                : isAnyOf(awt, rest...));
+                : isAnyOf(awt, rest...);
         }
 
         template <class It>

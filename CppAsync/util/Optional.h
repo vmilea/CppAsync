@@ -276,7 +276,7 @@ template <class T>
 bool operator==(const Optional<T>& lhs, const Optional<T>& rhs) _ut_noexcept
 {
     if (lhs)
-        return (rhs ? (lhs.get() == rhs.get()) : false);
+        return rhs ? (lhs.get() == rhs.get()) : false;
     else
         return !rhs;
 }
@@ -291,7 +291,7 @@ template <class T>
 bool operator<(const Optional<T>& lhs, const Optional<T>& rhs) _ut_noexcept
 {
     if (lhs)
-        return (rhs ? (lhs.get() < rhs.get()) : false);
+        return rhs ? (lhs.get() < rhs.get()) : false;
     else
         return rhs;
 }
