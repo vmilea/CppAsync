@@ -209,10 +209,10 @@ namespace detail
     template <class R, class Awaitable, EnableIfVoid<R> = nullptr>
     void loadResult(Promise<R>&& promise, Awaitable& awt)
     {
-        ut_assert(detail::awaitable::isReady(awt));
+        ut_assert(awaitable::isReady(awt));
 
-        if (detail::awaitable::hasError(awt))
-            promise.fail(detail::awaitable::takeError(awt));
+        if (awaitable::hasError(awt))
+            promise.fail(awaitable::takeError(awt));
         else
             promise.complete();
     }
@@ -220,12 +220,12 @@ namespace detail
     template <class R, class Awaitable, DisableIfVoid<R> = nullptr>
     void loadResult(Promise<R>&& promise, Awaitable& awt)
     {
-        ut_assert(detail::awaitable::isReady(awt));
+        ut_assert(awaitable::isReady(awt));
 
-        if (detail::awaitable::hasError(awt))
-            promise.fail(detail::awaitable::takeError(awt));
+        if (awaitable::hasError(awt))
+            promise.fail(awaitable::takeError(awt));
         else
-            promise.complete(detail::awaitable::takeResult(awt));
+            promise.complete(awaitable::takeResult(awt));
     }
 
     template <class Awaitable, class CancellationHandler, class Alloc>
@@ -233,13 +233,13 @@ namespace detail
         Awaitable& awt, CancellationHandler&& cancellationHandler)
     {
         using result_type = AwaitableResult<Awaitable>;
-        using awaiter_type = detail::AsTaskWrapper<Awaitable, CancellationHandler>;
+        using awaiter_type = AsTaskWrapper<Awaitable, CancellationHandler>;
         using awaiter_handle_type = AllocElementPtr<awaiter_type, Alloc>;
-        using listener_type = detail::BoundResourceListener<result_type, awaiter_handle_type>;
+        using listener_type = BoundResourceListener<result_type, awaiter_handle_type>;
 
-        if (detail::awaitable::isReady(awt)) {
+        if (awaitable::isReady(awt)) {
             ut::Task<result_type> task;
-            detail::loadResult(task.takePromise(), awt);
+            loadResult(task.takePromise(), awt);
 
             return task;
         } else {
