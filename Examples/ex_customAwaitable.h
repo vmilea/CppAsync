@@ -46,41 +46,49 @@ namespace ut {
 template <class R>
 struct AwaitableTraits<boost::shared_future<R>>
 {
-   static bool isReady(boost::shared_future<R>& fut) _ut_noexcept
-   {
-       return !fut.valid() || fut.is_ready();
-   }
+    static bool isReady(boost::shared_future<R>& fut) _ut_noexcept
+    {
+        return !fut.valid() || fut.is_ready();
+    }
 
-   static void setAwaiter(boost::shared_future<R>& fut, ut::Awaiter *awaiter) _ut_noexcept
-   {
-       fut.then([&awaiter](boost::shared_future<R> previous) {
-           // Make sure resumal happens on main thread.
-           context::looper().post([awaiter]() {
-               awaiter->resume(nullptr);
-           });
-       });
-   }
+    static void setAwaiter(boost::shared_future<R>& fut, ut::Awaiter *awaiter) _ut_noexcept
+    {
+        // Futures returned by boost::shared_future<R>::then() will block in their destructor
+        // until completed. To avoid this we capture the returned future inside continuation.
+        auto next = std::make_shared<boost::future<void>>();
 
-   static R takeResult(boost::shared_future<R>& fut)
-   {
-       return std::move(fut.get());
-   }
+        *next = fut.then([next, awaiter](boost::shared_future<R> previous) {
+            // Make sure resumal happens on main thread.
+            context::looper().post([next, awaiter]() {
+                // Break circular references.
+                *next = boost::future<void>();
 
-   static bool hasError(boost::shared_future<R>& fut) _ut_noexcept
-   {
-       return fut.has_exception();
-   }
+                awaiter->resume(nullptr);
+            });
+        });
+    }
 
-   static std::exception_ptr takeError(boost::shared_future<R>& fut) _ut_noexcept
-   {
-       try {
-           boost::rethrow_exception(fut.get_exception_ptr());
-           assert(false);
-           return std::exception_ptr();
-       } catch (...) {
-           return std::current_exception();
-       }
-   }
+    static R takeResult(boost::shared_future<R>& fut)
+    {
+        return std::move(fut.get());
+    }
+
+    static bool hasError(boost::shared_future<R>& fut) _ut_noexcept
+    {
+        return fut.has_exception();
+    }
+
+    static std::exception_ptr takeError(boost::shared_future<R>& fut) _ut_noexcept
+    {
+        try {
+            boost::rethrow_exception(fut.get_exception_ptr());
+            assert(false);
+            return std::exception_ptr();
+        }
+        catch (...) {
+            return std::current_exception();
+        }
+    }
 };
 
 }

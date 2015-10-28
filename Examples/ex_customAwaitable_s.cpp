@@ -20,7 +20,14 @@
 #include "ex_customAwaitable.h"
 #include <CppAsync/Scheduler.h>
 #include <CppAsync/StackfulAsync.h>
+#include <CppAsync/util/ScopeGuard.h>
 #include <boost/thread/thread.hpp>
+
+static void ping()
+{
+    printf(".");
+    context::looper().schedule(&ping, 100);
+}
 
 static boost::shared_future<int> startTick(int k)
 {
@@ -47,6 +54,9 @@ static boost::shared_future<int> startTick(int k)
 static ut::Task<void> asyncCountdown()
 {
     return ut::stackful::startAsync([]() {
+        // Stop pinging when done.
+        ut_scope_guard_([] { context::looper().cancelAll(); });
+
         for (int i = 3; i >= 0; i--) {
             boost::shared_future<int> future = startTick(i);
 
@@ -65,6 +75,9 @@ static ut::Task<void> asyncCountdown()
 void ex_customAwaitable_s()
 {
     ut::Task<void> task = asyncCountdown();
+
+    // Print every 100ms to show the even loop is not blocked.
+    ping();
 
     // Loop until there are no more scheduled operations.
     context::looper().run();

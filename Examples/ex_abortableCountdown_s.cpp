@@ -25,6 +25,12 @@
 // Custom run loop
 static util::Looper sLooper;
 
+static void ping()
+{
+    printf(".");
+    sLooper.schedule(&ping, 100);
+}
+
 static ut::Task<void> asyncDelay(long milliseconds)
 {
     ut::Task<void> task;
@@ -66,7 +72,7 @@ void ex_abortableCountdown_s()
         auto readLineTask = asyncReadLine();
 
         for (int i = n; i > 0; i--) {
-            printf("%d...\n", i);
+            printf("%d\n", i);
 
             // Suspend for up to 1 second, or until key press.
             auto *doneTask = ut::stackful::awaitAny_(
@@ -80,7 +86,13 @@ void ex_abortableCountdown_s()
         }
 
         printf("liftoff!\n");
+
+        // Stop pinging when done.
+        sLooper.cancelAll();
     });
+
+    // Print every 100ms to show the even loop is not blocked.
+    ping();
 
     // Loop until there are no more scheduled operations.
     sLooper.run();

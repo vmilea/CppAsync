@@ -24,6 +24,12 @@
 // Custom run loop
 static util::Looper sLooper;
 
+static void ping()
+{
+    printf(".");
+    sLooper.schedule(&ping, 100);
+}
+
 static ut::Task<void> asyncDelay(long milliseconds)
 {
     ut::Task<void> task;
@@ -47,14 +53,20 @@ void ex_countdown_s()
     // from within other asynchronous coroutines.
     ut::Task<void> task = ut::stackful::startAsync([n]() {
         for (int i = n; i > 0; i--) {
-            printf("%d...\n", i);
+            printf("%d\n", i);
 
             // Suspend for 1 second.
             ut::stackful::await_(asyncDelay(1000));
         }
 
         printf("liftoff!\n");
+
+        // Stop pinging when done.
+        sLooper.cancelAll();
     });
+
+    // Print every 100ms to show the even loop is not blocked.
+    ping();
 
     // In order to do meaningful work CppAsync requires some kind of run loop (Qt / GTK /
     // MFC / Boost.Asio / ...). Events should be dispatched to the run loop, enabling

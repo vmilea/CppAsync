@@ -25,6 +25,12 @@ namespace {
 // Custom run loop
 static util::Looper sLooper;
 
+static void ping()
+{
+    printf(".");
+    sLooper.schedule(&ping, 100);
+}
+
 static ut::Task<void> asyncDelay(long milliseconds)
 {
     ut::Task<void> task;
@@ -70,7 +76,7 @@ struct CountdownFrame : ut::AsyncFrame<void>
         readLineTask = asyncReadLine();
 
         while (n > 0) {
-            printf("%d...\n", n--);
+            printf("%d\n", n--);
 
             delayTask = asyncDelay(1000);
 
@@ -85,6 +91,10 @@ struct CountdownFrame : ut::AsyncFrame<void>
         }
 
         printf("liftoff!\n");
+
+        // Stop pinging when done.
+        sLooper.cancelAll();
+
         ut_end();
     }
 
@@ -102,6 +112,9 @@ void ex_abortableCountdown()
     const int n = 5;
 
     ut::Task<void> task = ut::startAsyncOf<CountdownFrame>(n);
+
+    // Print every 100ms to show the even loop is not blocked.
+    ping();
 
     // Loop until there are no more scheduled operations.
     sLooper.run();

@@ -22,6 +22,12 @@
 #include <CppAsync/StacklessAsync.h>
 #include <boost/thread/thread.hpp>
 
+static void ping()
+{
+    printf(".");
+    context::looper().schedule(&ping, 100);
+}
+
 static boost::shared_future<int> startTick(int k)
 {
     boost::shared_future<int> future;
@@ -48,6 +54,12 @@ static ut::Task<void> asyncCountdown()
 {
     struct Frame : ut::AsyncFrame<void>
     {
+        ~Frame()
+        {
+            // Stop pinging when done.
+            context::looper().cancelAll();
+        }
+
         void operator()()
         {
             ut_begin();
@@ -78,6 +90,9 @@ static ut::Task<void> asyncCountdown()
 void ex_customAwaitable()
 {
     ut::Task<void> task = asyncCountdown();
+
+    // Print every 100ms to show the even loop is not blocked.
+    ping();
 
     // Loop until there are no more scheduled operations.
     context::looper().run();

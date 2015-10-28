@@ -320,6 +320,12 @@ public:
     }
 
     /** thread safe */
+    Ticket schedule(void (*f)(), long delay = 0)
+    {
+        return schedule([f] { f(); }, delay);
+    }
+
+    /** thread safe */
     template <class F>
     Ticket post(F&& f)
     {
