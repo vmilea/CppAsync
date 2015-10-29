@@ -178,13 +178,17 @@ public:
 
     bool isRunning() const _ut_noexcept
     {
-        return hasPromise();
+        ut_assert(this->mState < ST_Running || promise()->mTask == this);
+
+        return this->mState >= ST_RunningPromiseless;
     }
 
     Promise<R> takePromise() _ut_noexcept
     {
         ut_dcheck(this->isValid());
-        ut_dcheck(this->mState == AwaitableBase::ST_Initial &&
+
+        ut_dcheck((this->mState == AwaitableBase::ST_Initial
+            || this->mState == ST_RunningPromiseless) &&
             "Promise already taken");
 
         // Pointers get updated whenever Promise or Task is moved.
@@ -197,9 +201,11 @@ public:
     void detach() _ut_noexcept
     {
         ut_dcheck(this->isValid());
+        ut_dcheck(isRunning());
         ut_dcheck(hasPromise());
 
         promise()->mState = Promise<R>::ST_OpRunningDetached;
+
         CommonAwaitable<R>::reset(AwaitableBase::ST_Initial);
 
         if (mListener) {
@@ -212,9 +218,11 @@ public:
     void cancel() _ut_noexcept
     {
         ut_dcheck(this->isValid());
-        ut_dcheck(hasPromise());
+        ut_dcheck(isRunning());
 
-        promise()->mState = Promise<R>::ST_OpCanceled;
+        if (hasPromise())
+            promise()->mState = Promise<R>::ST_OpCanceled;
+
         CommonAwaitable<R>::reset(CommonAwaitable<R>::ST_Canceled);
 
         mListener.reset();
@@ -224,8 +232,18 @@ private:
     Task(const Task& other) = delete;
     Task& operator=(const Task& other) = delete;
 
-    // Any value larger than or equal to ST_Running is assumed to be pointer to the promise.
-    static const uintptr_t ST_Running = AwaitableBase::ST_Initial + 1;
+    // Async operation is under way, but the Promise has been released. Completion is possible only
+    // after restoring it via takePromise().
+    //
+    // Releasing the Promise is useful when the completing context has direct access to the Task
+    // object and doesn't need to keep the Promise around. For example, C style async APIs carry
+    // only a void* for context, so instead of a Promise the callback function may have a Task* to
+    // complete. For this to work the Task object must not be moved or deleted while the async
+    // operation is in progress.
+    static const uintptr_t ST_RunningPromiseless = AwaitableBase::ST_Initial + 1;
+
+    // Any value larger than or equal to ST_Running is assumed to be a pointer to the Promise.
+    static const uintptr_t ST_Running = ST_RunningPromiseless + 1;
 
     // Reserve space for two pointers (virtual table ptr + managed data).
     using erased_listener_type = ut::VirtualObjectData<
@@ -296,32 +314,39 @@ private:
 
     bool hasPromise() const _ut_noexcept
     {
-        bool gotPromise = (this->mState >= ST_Running);
+        ut_assert(this->mState < ST_Running || promise()->mTask == this);
 
-        ut_assert(!gotPromise || promise()->mTask == this);
-
-        return gotPromise;
+        return this->mState >= ST_Running;
     }
 
     const Promise<R>* promise() const _ut_noexcept
     {
+        ut_assert(this->mState >= ST_Running);
+
         return static_cast<const Promise<R>*>(this->mStateAsPtr); // safe cast
     }
 
     Promise<R>* promise() _ut_noexcept
     {
+        ut_assert(this->mState >= ST_Running);
+
         return static_cast<Promise<R>*>(this->mStateAsPtr); // safe cast
     }
 
     void setPromise(Promise<R> *promise) _ut_noexcept
     {
-        this->mStateAsPtr = promise;
+        if (promise == nullptr) {
+            this->mState = ST_RunningPromiseless;
+        } else {
+            this->mStateAsPtr = promise;
+            ut_assert(this->mState >= ST_Running);
+        }
     }
 
     template <class ...Args>
     void complete(Args&&... args) _ut_noexcept
     {
-        ut_assert(!this->isReady() && this->hasPromise());
+        ut_assert(!this->isReady() && hasPromise());
 
         if (this->initializeResult(std::forward<Args>(args)...))
             onDone(AwaitableBase::ST_Completed);
@@ -491,6 +516,14 @@ public:
     SharedPromise<R> share()
     {
         return SharedPromise<R>(std::move(*this));
+    }
+
+    void release() _ut_noexcept
+    {
+        ut_dcheck(isCompletable());
+
+        task()->setPromise(nullptr);
+        mState = ST_Moved;
     }
 
     void cancel() _ut_noexcept
