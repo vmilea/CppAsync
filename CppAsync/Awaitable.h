@@ -50,9 +50,15 @@ namespace detail
     namespace awaitable
     {
         template <class Awaitable>
-        bool isReady(Awaitable& awt) _ut_noexcept
+        bool isReady(const Awaitable& awt) _ut_noexcept
         {
             return AwaitableTraits<Awaitable>::isReady(awt);
+        }
+
+        template <class Awaitable>
+        bool hasError(const Awaitable& awt) _ut_noexcept
+        {
+            return AwaitableTraits<Awaitable>::hasError(awt);
         }
 
         template <class Awaitable>
@@ -66,12 +72,6 @@ namespace detail
             -> decltype(AwaitableTraits<Awaitable>::takeResult(awt))
         {
             return AwaitableTraits<Awaitable>::takeResult(awt);
-        }
-
-        template <class Awaitable>
-        bool hasError(Awaitable& awt) _ut_noexcept
-        {
-            return AwaitableTraits<Awaitable>::hasError(awt);
         }
 
         template <class Awaitable>
@@ -99,9 +99,27 @@ public:
 //
 
 template <class Awaitable>
-bool awaitable_isReady(Awaitable& awt) _ut_noexcept
+bool awaitable_isReady(const Awaitable& awt) _ut_noexcept
 {
     return awt.isReady();
+}
+
+template <class Awaitable,
+    EnableIf<detail::HasMethod_hasError<Awaitable>::value> = nullptr>
+bool awaitable_hasError(const Awaitable& awt) _ut_noexcept
+{
+    return awt.hasError();
+}
+
+template <class Awaitable,
+    EnableIf<!detail::HasMethod_hasError<Awaitable>::value> = nullptr>
+bool awaitable_hasError(const Awaitable& awt) _ut_noexcept
+{
+    static_assert(!Eval<Awaitable>::value,
+        "Awaitable type doesn't support checking for error. "
+        "Use ut_await_no_throw_() instead.");
+
+    return false;
 }
 
 template <class Awaitable>
@@ -115,24 +133,6 @@ auto awaitable_takeResult(Awaitable& awt)
     -> RemoveReference<decltype(awt.takeResult())>
 {
     return awt.takeResult();
-}
-
-template <class Awaitable,
-    EnableIf<detail::HasMethod_hasError<Awaitable>::value> = nullptr>
-bool awaitable_hasError(Awaitable& awt) _ut_noexcept
-{
-    return awt.hasError();
-}
-
-template <class Awaitable,
-    EnableIf<!detail::HasMethod_hasError<Awaitable>::value> = nullptr>
-bool awaitable_hasError(Awaitable& awt) _ut_noexcept
-{
-    static_assert(!Eval<Awaitable>::value,
-        "Awaitable type doesn't support checking for error. "
-        "Use ut_await_no_throw_() instead.");
-
-    return false;
 }
 
 template <class Awaitable,
@@ -158,9 +158,14 @@ Error awaitable_takeError(Awaitable& awt) _ut_noexcept
 template <class Awaitable>
 struct AwaitableTraits
 {
-    static bool isReady(Awaitable& awt) _ut_noexcept
+    static bool isReady(const Awaitable& awt) _ut_noexcept
     {
         return awaitable_isReady(awt);
+    }
+
+    static bool hasError(const Awaitable& awt) _ut_noexcept
+    {
+        return awaitable_hasError(awt);
     }
 
     static void setAwaiter(Awaitable& awt, Awaiter *awaiter) _ut_noexcept
@@ -173,11 +178,6 @@ struct AwaitableTraits
         -> decltype(awaitable_takeResult(awt))
     {
         return awaitable_takeResult(awt);
-    }
-
-    static bool hasError(Awaitable& awt) _ut_noexcept
-    {
-        return awaitable_hasError(awt);
     }
 
     static Error takeError(Awaitable& awt) _ut_noexcept

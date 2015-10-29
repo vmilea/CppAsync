@@ -46,9 +46,14 @@ namespace ut {
 template <class R>
 struct AwaitableTraits<boost::shared_future<R>>
 {
-    static bool isReady(boost::shared_future<R>& fut) _ut_noexcept
+    static bool isReady(const boost::shared_future<R>& fut) _ut_noexcept
     {
         return !fut.valid() || fut.is_ready();
+    }
+
+    static bool hasError(const boost::shared_future<R>& fut) _ut_noexcept
+    {
+        return fut.has_exception();
     }
 
     static void setAwaiter(boost::shared_future<R>& fut, ut::Awaiter *awaiter) _ut_noexcept
@@ -71,11 +76,6 @@ struct AwaitableTraits<boost::shared_future<R>>
     static R takeResult(boost::shared_future<R>& fut)
     {
         return std::move(fut.get());
-    }
-
-    static bool hasError(boost::shared_future<R>& fut) _ut_noexcept
-    {
-        return fut.has_exception();
     }
 
     static std::exception_ptr takeError(boost::shared_future<R>& fut) _ut_noexcept
