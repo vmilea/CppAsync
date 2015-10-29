@@ -148,6 +148,7 @@ private:
         mData.assign(isB, std::forward<U>(value));
     }
 
+#ifndef UT_NO_EXCEPTIONS
     template <class U>
     void assignBImpl(ThrowTag, bool isB, U&& value)
     {
@@ -155,21 +156,23 @@ private:
             mData.assignIntoB(std::forward<U>(value)); // may throw
         } else {
             A tmp(std::move(a())); // no throw
-            _ut_try {
+            try {
                 mData.assignIntoA(std::forward<U>(value));
-            } _ut_catch (...) {
+            } catch (...) {
                 // B constructor has thrown, rollback and rethrow
                 mData.assignIntoBlank(std::move(tmp));
-                _ut_rethrow;
+                throw;
             }
         }
     }
+#endif
 
     void swapImpl(NoThrowTag, bool isB, bool isOtherB, EitherData<A, B>& other) _ut_noexcept
     {
         mData.swap(isB, isOtherB, other.mData); // no throw
     }
 
+#ifndef UT_NO_EXCEPTIONS
     void swapImpl(ThrowTag, bool isB, bool isOtherB, EitherData<A, B>& other)
     {
         if (isOtherB) {
@@ -177,31 +180,32 @@ private:
                 mData.swapBIntoB(other.mData); // may throw
             } else {
                 A tmp(std::move(a())); // no throw
-                _ut_try {
+                try {
                     mData.assignIntoA(std::move(other.mData.b())); // may throw
                     other.mData.assignIntoB(std::move(tmp)); // no throw
-                } _ut_catch (...) {
+                } catch (...) {
                     // B move-constructor has thrown, rollback and rethrow.
                     mData.assignIntoBlank(std::move(tmp)); // no throw
-                    _ut_rethrow;
+                    throw;
                 }
             }
         } else {
             if (isB) {
                 A tmp(std::move(other.a())); // no throw
-                _ut_try {
+                try {
                     other.mData.assignIntoA(std::move(mData.b())); // may throw
                     mData.assignIntoB(std::move(tmp)); // no throw
-                } _ut_catch (...) {
+                } catch (...) {
                     // B move-constructor has thrown, rollback and rethrow.
                     other.mData.assignIntoBlank(std::move(tmp));
-                    _ut_rethrow;
+                    throw;
                 }
             } else {
                 mData.swapAIntoA(other.mData); // no throw
             }
         }
     }
+#endif
 
     UnsafeEitherData<A, B> mData;
 };

@@ -96,17 +96,26 @@ public:
             ut_dcheck(mCoroutine != nullptr &&
                 "May not increment past end");
 
-            _ut_try {
+#ifdef UT_NO_EXCEPTIONS
+            if ((*mCoroutine)()) {
+                ut_dcheck(mCoroutine->value() != nullptr &&
+                    "May not yield nullptr from coroutine");
+            } else {
+                mCoroutine = nullptr;
+            }
+#else
+            try {
                 if ((*mCoroutine)()) {
                     ut_dcheck(mCoroutine->value() != nullptr &&
                         "May not yield nullptr from coroutine");
                 } else {
                     mCoroutine = nullptr;
                 }
-            } _ut_catch (...) {
+            } catch (...) {
                 mCoroutine = nullptr;
-                _ut_rethrow;
+                throw;
             }
+#endif
 
             return *this;
         }
@@ -122,11 +131,11 @@ public:
         }
 
     private:
-        Iterator(Coroutine *coroutine) _ut_noexcept
-            : mCoroutine(coroutine) { }
-
         // Disable postfix increment.
         Iterator& operator++(int) = delete;
+
+        Iterator(Coroutine *coroutine) _ut_noexcept
+            : mCoroutine(coroutine) { }
 
         Coroutine *mCoroutine;
 

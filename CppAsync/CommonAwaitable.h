@@ -177,16 +177,13 @@ private:
         return true;
     }
 
+#ifndef UT_NO_EXCEPTIONS
     template <class ...Args>
     bool initializeResultImpl(ThrowTag, Args&&... args) _ut_noexcept
     {
         ut_assert(!isReady());
         ut_assert(isNil(mResult.a()));
 
-#ifdef UT_NO_EXCEPTIONS
-        mResult.raw().emplaceBIntoA(std::forward<Args>(args)...);
-        return true;
-#else
         try {
             mResult.raw().emplaceBIntoA(std::forward<Args>(args)...);
             return true;
@@ -194,8 +191,8 @@ private:
             mResult.raw().assignIntoBlank(currentException());
             return false;
         }
-#endif
     }
+#endif
 
     EitherData<Error, R> mResult;
 };

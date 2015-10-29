@@ -69,10 +69,6 @@
 
 #ifdef UT_NO_EXCEPTIONS
 
-#define _ut_try       if (true)
-#define _ut_catch(x)  if (false)
-#define _ut_rethrow
-
 namespace ut
 {
     class Error
@@ -140,10 +136,6 @@ namespace ut
 }
 
 #else
-
-#define _ut_try       try
-#define _ut_catch(x)  catch (x)
-#define _ut_rethrow   throw
 
 namespace ut
 {

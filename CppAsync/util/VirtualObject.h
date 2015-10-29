@@ -218,14 +218,19 @@ public:
         if (this != &other)
         {
             VirtualObjectData tmp;
-            _ut_try {
+
+#ifdef UT_NO_EXCEPTIONS
+            other->clone(&tmp.mData);
+#else
+            try {
                 other->clone(&tmp.mData);
-            } _ut_catch (...) {
-                // copy has not been constructed, clear any junk
-                // to ensure the destructor doesn't get called
+            } catch (...) {
+                // Copy has not been constructed, clear any junk
+                // to ensure the destructor doesn't get called.
                 tmp.clear();
-                _ut_rethrow;
+                throw;
             }
+#endif
 
             *this = std::move(tmp);
         }

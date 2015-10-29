@@ -194,7 +194,9 @@ struct None
 
 struct NoThrowTag;
 
+#ifndef UT_NO_EXCEPTIONS
 struct ThrowTag;
+#endif
 
 namespace detail
 {
@@ -210,6 +212,13 @@ namespace detail
         using type = void;
     };
 
+#ifdef UT_NO_EXCEPTIONS
+    template <bool IsNoThrow>
+    struct TagByNoThrowImpl
+    {
+        using type = NoThrowTag;
+    };
+#else
     template <bool IsNoThrow>
     struct TagByNoThrowImpl
     {
@@ -221,13 +230,16 @@ namespace detail
     {
         using type = NoThrowTag;
     };
+#endif
 }
 
 struct DelegateTag { };
 
 struct NoThrowTag : DelegateTag { };
 
+#ifndef UT_NO_EXCEPTIONS
 struct ThrowTag : DelegateTag { };
+#endif
 
 template <bool IsNoThrow>
 using TagByNoThrow = typename detail::TagByNoThrowImpl<IsNoThrow>::type;
