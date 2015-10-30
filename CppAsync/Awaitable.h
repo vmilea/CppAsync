@@ -146,7 +146,7 @@ template <class Awaitable,
     EnableIf<!detail::HasMethod_hasError<Awaitable>::value> = nullptr>
 Error awaitable_takeError(Awaitable& awt) _ut_noexcept
 {
-    ut_check(awaitable_hasError(awt));
+    ut_dcheck(awaitable_hasError(awt));
 
     return Error();
 }

@@ -85,12 +85,12 @@ public:
 
     void clone(void * /* into */) const final
     {
-        ut_check(false && "PinnedMixin doesn't support cloning");
+        ut_check(false); // PinnedMixin doesn't support cloning
     }
 
     void move(void * /* into */) _ut_noexcept final
     {
-        ut_check(false && "PinnedMixin doesn't support moving");
+        ut_check(false); // PinnedMixin doesn't support moving
     }
 
 private:
@@ -116,7 +116,7 @@ public:
 
     void clone(void * /* into */) const final
     {
-        ut_check(false && "MovableMixin supports moving but not cloning");
+        ut_check(false); // MovableMixin supports moving but not cloning
     }
 
     void move(void *into) _ut_noexcept final
@@ -183,6 +183,9 @@ public:
     template <class T, class ...Args>
     VirtualObjectData(TypeInPlaceTag<T>, Args&&... args)
     {
+        static_assert(!std::is_abstract<T>::value,
+                "Emplaced type may not be abstract");
+
         static_assert(std::is_base_of<Interface, T>::value,
             "Emplaced type must derive from Interface");
 

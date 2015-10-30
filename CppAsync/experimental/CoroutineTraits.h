@@ -143,7 +143,7 @@ namespace experimental
         template <class Alloc, class ...Args>
         static Alloc get_allocator(std::allocator_arg_t, const Alloc& alloc, Args&&...)
         {
-            return allocator;
+            return alloc;
         }
     };
 }

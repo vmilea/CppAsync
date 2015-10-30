@@ -27,7 +27,7 @@ enum CopyPolicy
 {
     CPY_Default,
     CPY_MoveOnCopy,
-    CPY_ThrowOnCopy,
+    CPY_AbortOnCopy,
     CPY_Disabled,
 };
 
@@ -279,15 +279,14 @@ private:
 };
 
 template <class F, class ...Captures>
-class Closure<CPY_ThrowOnCopy, F, Captures...>
+class Closure<CPY_AbortOnCopy, F, Captures...>
     : public ClosureBase<F, Captures...>
 {
 public:
     Closure(const Closure& other)
         : ClosureBase<F, Captures...>(std::move(const_cast<Closure&>(other)))
     {
-        ut_check(false &&
-            "May not copy-construct a Closure with throw-on-copy policy");
+        ut_check(false); // May not copy-construct a Closure with abort-on-copy policy
     }
 
     Closure(F&& f, Captures&&... args)
@@ -295,8 +294,7 @@ public:
 
     Closure& operator=(const Closure& other)
     {
-        ut_check(this == &other &&
-            "May not copy-assign a Closure with throw-on-copy policy");
+        ut_check(this == &other); // May not copy-assign a Closure with abort-on-copy policy
 
         return *this;
     }
@@ -351,9 +349,9 @@ Closure<CPY_MoveOnCopy, Unqualified<F>, Args...> makeMoveOnCopyClosure(F&& f, Ar
 }
 
 template <class F, class ...Args>
-Closure<CPY_ThrowOnCopy, Unqualified<F>, Args...> makeThrowOnCopyClosure(F&& f, Args&&... args)
+Closure<CPY_AbortOnCopy, Unqualified<F>, Args...> makeAbortOnCopyClosure(F&& f, Args&&... args)
 {
-    UT_DEF_MAKE_CLOSURE(CPY_ThrowOnCopy)
+    UT_DEF_MAKE_CLOSURE(CPY_AbortOnCopy)
 }
 
 template <class F, class ...Args>

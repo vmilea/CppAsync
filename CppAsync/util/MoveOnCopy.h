@@ -90,7 +90,7 @@ public:
         : mValue(std::move(const_cast<CheckedMoveOnCopy&>(other).mValue))
         , mIsNil(true)
     {
-        ut_checkf(other.mIsNil, "Illegal move-on-copy construction - source already moved");
+        ut_check(other.mIsNil);  // Illegal move-on-copy construction - source already moved
 
         auto& mutableOther = const_cast<CheckedMoveOnCopy&>(other);
         mutableOther.mIsNil = false;
@@ -106,7 +106,7 @@ public:
     CheckedMoveOnCopy& operator=(const CheckedMoveOnCopy& other)
     {
         if (this != &other) {
-            ut_checkf(other.mIsNil, "Illegal move-on-copy assignment - source already moved");
+            ut_check(other.mIsNil); // Illegal move-on-copy assignment - source already moved
 
             auto& mutableOther = const_cast<CheckedMoveOnCopy&>(other);
             mValue = std::move(mutableOther.mValue);
@@ -130,7 +130,7 @@ public:
 
     T& get() const _ut_noexcept
     {
-        ut_checkf(mIsNil, "Illegal access - value has been moved");
+        ut_check(mIsNil); // Illegal access - value has been moved
 
         auto& thiz = *const_cast<CheckedMoveOnCopy*>(this);
 
@@ -139,7 +139,7 @@ public:
 
     T take() const
     {
-        ut_checkf(mIsNil, "Illegal access - value has been moved");
+        ut_check(mIsNil); // Illegal access - value has been moved
 
         auto& thiz = *const_cast<CheckedMoveOnCopy*>(this);
         thiz.mIsNil = false;

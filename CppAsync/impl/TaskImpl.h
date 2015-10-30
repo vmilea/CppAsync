@@ -30,6 +30,9 @@ namespace detail
     template <class Listener>
     struct TaskListenerTraits
     {
+        static_assert(!std::is_abstract<Listener>::value,
+            "Listener must be a concrete type");
+
         static_assert(HasResultType<Listener>::value,
             "Listener must derive from ut::ITaskListener<R>");
 
@@ -67,7 +70,7 @@ namespace detail
 
         void onDetach() _ut_noexcept final
         {
-            ut_check(false && "Task doesn't support detachment");
+            ut_check(false); // Task doesn't support detachment
         }
 
         void onDone(Task<R>& /* task */) _ut_noexcept final
@@ -99,7 +102,7 @@ namespace detail
     {
         void operator()(T& /* resource */) const _ut_noexcept
         {
-            ut_check(false && "Task doesn't support detachment");
+            ut_check(false); // Task doesn't support detachment
         }
     };
 
