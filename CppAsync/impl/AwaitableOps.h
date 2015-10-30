@@ -17,8 +17,8 @@
 #pragma once
 
 #include "Common.h"
+#include "../AwaitableBase.h"
 #include "../util/Range.h"
-#include "../CommonAwaitable.h"
 
 namespace ut {
 

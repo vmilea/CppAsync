@@ -18,10 +18,10 @@
 
 #include "impl/Common.h"
 #include "impl/Assert.h"
+#include "impl/CommonAwaitable.h"
 #include "util/Meta.h"
 #include "util/SmartPtr.h"
 #include "util/VirtualObject.h"
-#include "CommonAwaitable.h"
 #include <exception>
 
 namespace ut {
@@ -63,7 +63,7 @@ protected:
     Task<R>& task() _ut_noexcept
     {
         return *ptrCast<Task<R>*>( // safe cast
-            ptrCast<char*>(this) - sizeof(CommonAwaitable<R>)); // safe cast
+            ptrCast<char*>(this) - sizeof(detail::CommonAwaitable<R>)); // safe cast
     }
 };
 
@@ -91,7 +91,7 @@ namespace detail
 }
 
 template <class R>
-class Task : public CommonAwaitable<R>
+class Task : public detail::CommonAwaitable<R>
 {
     using adapted_result_type = Replace<R, void, Nothing>;
 
@@ -206,7 +206,7 @@ public:
 
         promise()->mState = Promise<R>::ST_OpRunningDetached;
 
-        CommonAwaitable<R>::reset(AwaitableBase::ST_Initial);
+        detail::CommonAwaitable<R>::reset(AwaitableBase::ST_Initial);
 
         if (mListener) {
             auto listener = std::move(mListener);
@@ -223,7 +223,7 @@ public:
         if (hasPromise())
             promise()->mState = Promise<R>::ST_OpCanceled;
 
-        CommonAwaitable<R>::reset(CommonAwaitable<R>::ST_Canceled);
+        detail::CommonAwaitable<R>::reset(detail::CommonAwaitable<R>::ST_Canceled);
 
         mListener.reset();
     }
@@ -258,7 +258,7 @@ private:
 
     template <class T>
     Task(DelegateTag, Task<T>&& other)
-        : CommonAwaitable<R>(std::move(other))
+        : detail::CommonAwaitable<R>(std::move(other))
         , mListener(std::move(other.mListener))
     {
         static_assert(std::is_same<R, T>::value,
@@ -277,7 +277,7 @@ private:
 
         auto *prevPromise = hasPromise() ? promise() : nullptr;
 
-        CommonAwaitable<R>::operator=(std::move(other)); // may throw
+        detail::CommonAwaitable<R>::operator=(std::move(other)); // may throw
 
         if (prevPromise != nullptr)
             prevPromise->mState = Promise<R>::ST_OpCanceled;
@@ -296,7 +296,7 @@ private:
 
     void swapImpl(Task& other)
     {
-        CommonAwaitable<R>::swap(other); // may throw
+        detail::CommonAwaitable<R>::swap(other); // may throw
 
         // Adjust promise-task pointers.
         if (this->mState >= ST_Running) {
@@ -389,7 +389,8 @@ private:
         -> Task<typename detail::TaskListenerTraits<L>::result_type>;
 };
 
-static_assert(sizeof(Task<char>) == sizeof(CommonAwaitable<char>) + 2 * ptr_size, "" );
+static_assert(sizeof(Task<char>) ==
+    sizeof(detail::CommonAwaitable<char>) + 2 * ptr_size, "");
 
 //
 // Specializations

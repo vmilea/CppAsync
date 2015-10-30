@@ -298,13 +298,13 @@ namespace ut
     }
 
     template <class R, DisableIfVoid<R> = nullptr>
-    R&& await_resume(CommonAwaitable<R>& awt)
+    R&& await_resume(detail::CommonAwaitable<R>& awt)
     {
         return std::move(awt.get());
     }
 
     template <class R, EnableIfVoid<R> = nullptr>
-    void await_resume(CommonAwaitable<R>& awt)
+    void await_resume(detail::CommonAwaitable<R>& awt)
     {
         awt.get();
     }
