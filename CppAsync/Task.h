@@ -853,60 +853,8 @@ Task<R> makeTaskWithResource(T resource) _ut_noexcept
 }
 
 //
-// Lightweight type erasure for awaitables. The awaitable object is passed by reference and must
-// remain valid until the operation completes or is canceled. Calling task.cancel() or deleting /
-// overwriting the task object before completion will trigger the cancellationHandler.
-//
-
-template <class Awaitable, class CancellationHandler, class Alloc>
-Task<AwaitableResult<Awaitable>> asTask(std::allocator_arg_t, const Alloc& alloc, Awaitable& awt,
-    CancellationHandler cancellationHandler)
-{
-    return detail::asTaskImpl(std::allocator_arg, alloc, awt, std::move(cancellationHandler));
-}
-
-template <class Awaitable, class Alloc>
-Task<AwaitableResult<Awaitable>> asTask(std::allocator_arg_t, const Alloc& alloc, Awaitable& awt)
-{
-    return detail::asTaskImpl(std::allocator_arg, alloc, awt,
-        detail::IgnoreCancellation<Awaitable>());
-}
-
-template <class Awaitable, class CancellationHandler>
-Task<AwaitableResult<Awaitable>> asTask(Awaitable& awt, CancellationHandler cancellationHandler)
-{
-    return detail::asTaskImpl(std::allocator_arg, std::allocator<char>(), awt,
-        std::move(cancellationHandler));
-}
-
-template <class Awaitable>
-Task<AwaitableResult<Awaitable>> asTask(Awaitable& awt)
-{
-    return detail::asTaskImpl(std::allocator_arg, std::allocator<char>(), awt,
-        detail::IgnoreCancellation<Awaitable>());
-}
-
-//
 // Shims
 //
-
-namespace detail
-{
-    template <class C>
-    class HasTaskField
-    {
-        static std::true_type checkTask(AwaitableBase&);
-
-        template <class T> static auto test(T *container)
-            -> decltype(checkTask(selectAwaitable(container->task)));
-
-        template <class T> static std::false_type test(...);
-
-    public:
-        using type = decltype(test<C>(nullptr));
-        static const bool value = type::value;
-    };
-}
 
 // Awaitable shims
 
@@ -923,7 +871,6 @@ R awaitable_takeResult(Task<R>& task)
 }
 
 // Selector shims
-//
 
 template <class T, EnableIf<detail::HasTaskField<T>::value> = nullptr>
 AwaitableBase& selectAwaitable(T& item) _ut_noexcept
