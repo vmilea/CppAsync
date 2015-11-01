@@ -63,7 +63,6 @@ public:
     bool hasError() const _ut_noexcept
     {
         ut_dcheck(isValid());
-        ut_assert(mState != ST_Failed || !isNil(castError()));
 
         return mState == ST_Failed;
     }

@@ -283,7 +283,6 @@ namespace detail
         {
             ut_assert(!isReady());
             ut_assert(isNil(mError));
-            ut_assert(!isNil(error));
 
             mError = std::move(error);
         }
