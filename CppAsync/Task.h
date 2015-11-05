@@ -519,6 +519,12 @@ public:
         return SharedPromise<R>(std::move(*this));
     }
 
+    template <class Alloc>
+    SharedPromise<R> share(const Alloc& alloc)
+    {
+        return SharedPromise<R>(std::move(*this), alloc);
+    }
+
     void release() _ut_noexcept
     {
         ut_dcheck(isCompletable());
@@ -730,6 +736,14 @@ public:
 private:
     explicit SharedPromise(Promise<R>&& promise)
         : mSharedPromise(std::make_shared<Promise<R>>(std::move(promise))) { }
+
+    template <class Alloc>
+    SharedPromise(Promise<R>&& promise, const Alloc& alloc)
+#ifdef UT_NO_EXCEPTIONS
+        : mSharedPromise(allocateSharedNoThrow<Promise<R>>(alloc, std::move(promise))) { }
+#else
+        : mSharedPromise(std::allocate_shared<Promise<R>>(alloc, std::move(promise))) { }
+#endif
 
     std::shared_ptr<Promise<R>> mSharedPromise;
 

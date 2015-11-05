@@ -70,6 +70,8 @@ public:
         mArena->template deallocate<T>(p, n);
     }
 
+    using pointer = value_type*; // MSVC 12.0/14.0 workaround for shared_ptr
+
     template <class U> // MSVC 12.0 workaround for shared_ptr
     struct rebind
     {
@@ -207,12 +209,12 @@ private:
 
         ut_dcheck(p != nullptr);
 
-        // Do nothing.
+        // Deallocate if this is the last chunk, otherwise do nothing.
 
-        //std::size_t chunkSize = (size + max_align_size - 1) / max_align_size * max_align_size;
-        //
-        //if (static_cast<char*>(p) + chunkSize == mPos) // safe cast
-        //    mPos = static_cast<char*>(p); // safe cast
+        std::size_t chunkSize = (size + max_align_size - 1) / max_align_size * max_align_size;
+
+        if (static_cast<char*>(p) + chunkSize == mPos) // safe cast
+            mPos = static_cast<char*>(p); // safe cast
     }
 };
 
