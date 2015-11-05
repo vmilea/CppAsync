@@ -19,7 +19,6 @@
 #if defined(_MSC_VER) && _MSC_VER >= 1900
 
 #include "../impl/Common.h"
-#include "../util/Instance.h"
 #include "../util/Cast.h"
 #include "../Task.h"
 #include <experimental/resumable>
@@ -60,7 +59,7 @@ namespace detail
             Task<R> get_return_object() _ut_noexcept
             {
                 auto task = ut::makeTaskWithListener<Listener>(this);
-                mPromise.initialize(task.takePromise());
+                mPromise = task.takePromise();
 
                 resumeCoroutine();
 
@@ -81,7 +80,7 @@ namespace detail
             //
             // void set_exception(ut::Error error)
             // {
-            //     mPromise->fail(std::move(error));
+            //     mPromise.fail(std::move(error));
             // }
 
             AwaitContext* replaceAwaitContext(ContextCleaner contextCleaner) _ut_noexcept
@@ -96,8 +95,8 @@ namespace detail
 
             void resumeCoroutine() _ut_noexcept
             {
-                ut_assert(mPromise->state() == PromiseBase::ST_OpRunning
-                    || mPromise->state() == PromiseBase::ST_OpRunningDetached);
+                ut_assert(mPromise.state() == PromiseBase::ST_OpRunning
+                    || mPromise.state() == PromiseBase::ST_OpRunningDetached);
 
                 auto coro = coroutine_handle_type::from_promise(this);
 
@@ -117,7 +116,7 @@ namespace detail
 
             void interruptCoroutine(Error error) _ut_noexcept
             {
-                Promise<R> promise(std::move(*mPromise));
+                Promise<R> promise(std::move(mPromise));
                 coroutine_handle_type::from_promise(this).destroy();
 
                 if (promise.isCompletable())
@@ -142,12 +141,10 @@ namespace detail
                     if (mTaskPromise != nullptr) {
                         // Interrupt coroutine.
 
-                        Promise<R>& promise = *mTaskPromise->mPromise;
-
-                        ut_dcheck(!promise.isCompletable() &&
+                        ut_dcheck(!mTaskPromise->mPromise.isCompletable() &&
                             "Stackless coroutine may not delete itself while it is executing");
 
-                        ut_assert(promise.state() == ut::PromiseBase::ST_OpCanceled);
+                        ut_assert(mTaskPromise->mPromise.state() == ut::PromiseBase::ST_OpCanceled);
 
                         coroutine_handle_type::from_promise(mTaskPromise).destroy();
                     }
@@ -169,7 +166,7 @@ namespace detail
 
             AwaitContext mAwaitContext;
             ContextCleaner mContextCleaner;
-            Instance<Promise<R>> mPromise;
+            Promise<R> mPromise;
 
             friend struct TaskPromiseMixin<R>;
         };
@@ -182,8 +179,7 @@ namespace detail
             {
                 auto& thiz = static_cast<TaskPromise<R>&>(*this);
 
-                if (thiz.mPromise->isCompletable())
-                    thiz.mPromise->complete(std::forward<U>(value));
+                thiz.mPromise(std::forward<U>(value));
             }
         };
 
@@ -194,8 +190,7 @@ namespace detail
             {
                 auto& thiz = static_cast<TaskPromise<void>&>(*this);
 
-                if (thiz.mPromise->isCompletable())
-                    thiz.mPromise->complete();
+                thiz.mPromise();
             }
         };
     }

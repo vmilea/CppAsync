@@ -125,7 +125,7 @@ private:
         do {
             if (mMsgQueue.empty()) {
                 ut::Task<void> evtTask;
-                mEvtMsgQueued = evtTask.takePromise().share();
+                mEvtMsgQueued = evtTask.takePromise();
 
                 // Suspend while the outbound queue is empty.
                 ut::stackful::await_(evtTask);
@@ -179,7 +179,7 @@ private:
     tcp::resolver::query mQuery;
     std::string mNickname;
     std::deque<Msg> mMsgQueue;
-    ut::SharedPromise<void> mEvtMsgQueued;
+    ut::Promise<void> mEvtMsgQueued;
     ut::ContextRef<Context> mCtx;
 
     ut::Task<void> mMainTask;

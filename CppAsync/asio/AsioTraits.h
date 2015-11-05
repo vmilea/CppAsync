@@ -19,7 +19,6 @@
 #include "../impl/Common.h"
 #include "../Task.h"
 #include "../util/ContextRef.h"
-#include "../util/Instance.h"
 #include "../util/MoveOnCopy.h"
 #include <boost/asio/async_result.hpp>
 #include <boost/asio/handler_type.hpp>
@@ -82,13 +81,13 @@ namespace detail
     public:
         void initialize(Promise<R>&& promise) _ut_noexcept
         {
-            mPromise.initialize(makeUncheckedMoveOnCopy(std::move(promise)));
+            mPromise = makeUncheckedMoveOnCopy(std::move(promise));
         }
 
         template <class U>
         void operator()(const boost::system::error_code& ec, U&& result) _ut_noexcept
         {
-            Promise<R> promise = mPromise->take();
+            Promise<R> promise = mPromise.take();
 
             if (promise.isCompletable()) {
                 if (ec)
@@ -99,10 +98,11 @@ namespace detail
         }
 
     protected:
-        AsTaskHandlerBase() = default;
+        AsTaskHandlerBase() _ut_noexcept
+            : mPromise(Promise<R>()) { }
 
     private:
-        Instance<UncheckedMoveOnCopy<Promise<R>>> mPromise;
+        UncheckedMoveOnCopy<Promise<R>> mPromise;
     };
 
     template <>
@@ -111,12 +111,12 @@ namespace detail
     public:
         void initialize(Promise<void>&& promise) _ut_noexcept
         {
-            mPromise.initialize(makeUncheckedMoveOnCopy(std::move(promise)));
+            mPromise = makeUncheckedMoveOnCopy(std::move(promise));
         }
 
         void operator()(const boost::system::error_code& ec) _ut_noexcept
         {
-            Promise<void> promise = mPromise->take();
+            Promise<void> promise = mPromise.take();
 
             if (promise.isCompletable()) {
                 if (ec)
@@ -127,10 +127,11 @@ namespace detail
         }
 
     protected:
-        AsTaskHandlerBase() = default;
+        AsTaskHandlerBase() _ut_noexcept
+            : mPromise(Promise<void>()) { }
 
     private:
-        Instance<UncheckedMoveOnCopy<Promise<void>>> mPromise;
+        UncheckedMoveOnCopy<Promise<void>> mPromise;
     };
 
     template <class R, class Context>

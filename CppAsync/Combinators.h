@@ -18,7 +18,6 @@
 
 #include "impl/Common.h"
 #include "impl/AwaitableOps.h"
-#include "util/Instance.h"
 #include "util/AllocElementPtr.h"
 #include "Task.h"
 
@@ -46,7 +45,7 @@ namespace detail
     struct AnyAwaiter : Awaiter
     {
         Container awts;
-        Instance<Promise<R>> promise;
+        Promise<R> promise;
 
         AnyAwaiter(Container&& awts)
             : awts(std::move(awts))
@@ -56,7 +55,7 @@ namespace detail
 
         ~AnyAwaiter() _ut_noexcept
         {
-            if (promise->state() == PromiseBase::ST_OpCanceled) {
+            if (promise.state() == PromiseBase::ST_OpCanceled) {
                 for (auto& item : makeRange(awts)) {
                     auto& awt = selectAwaitable(item);
 
@@ -92,7 +91,7 @@ namespace detail
                         ut_assert(!awt->isReady() && awt->awaiter() == this);
                         awt->setAwaiter(nullptr);
                     }
-                    completeCombinator(std::move(*promise), pos, range.last);
+                    completeCombinator(std::move(promise), pos, range.last);
                     return;
                 } else {
                     ut_assert(!awt->isReady() && awt->awaiter() == this);
@@ -138,7 +137,7 @@ namespace detail
 
         auto task = makeTaskWithListener<listener_type>(std::move(handle));
         auto& awaiter = *task.template listenerAs<listener_type>().resource;
-        awaiter.promise.initialize(task.takePromise());
+        awaiter.promise = task.takePromise();
 
         return task;
     }
@@ -152,7 +151,7 @@ namespace detail
     {
         Container awts;
         std::size_t count;
-        Instance<Promise<R>> promise;
+        Promise<R> promise;
 
         SomeAwaiter(std::size_t count, Container&& awts)
             : awts(std::move(awts))
@@ -163,7 +162,7 @@ namespace detail
 
         ~SomeAwaiter() _ut_noexcept
         {
-            if (promise->state() == PromiseBase::ST_OpCanceled) {
+            if (promise.state() == PromiseBase::ST_OpCanceled) {
                 for (auto& item : makeRange(awts)) {
                     auto& awt = selectAwaitable(item);
 
@@ -207,7 +206,7 @@ namespace detail
                                 awt->setAwaiter(nullptr);
                             }
                         }
-                        completeCombinator(std::move(*promise), pos, range.last);
+                        completeCombinator(std::move(promise), pos, range.last);
                         return;
                     }
 
@@ -227,7 +226,7 @@ namespace detail
                         awt.setAwaiter(nullptr);
                     }
                 }
-                completeCombinator(std::move(*promise), range.last, range.last);
+                completeCombinator(std::move(promise), range.last, range.last);
             }
         }
     };
@@ -284,7 +283,7 @@ namespace detail
 
         auto task = makeTaskWithListener<listener_type>(std::move(handle));
         auto& awaiter = *task.template listenerAs<listener_type>().resource;
-        awaiter.promise.initialize(task.takePromise());
+        awaiter.promise = task.takePromise();
 
         return task;
     }

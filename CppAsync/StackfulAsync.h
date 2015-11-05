@@ -57,7 +57,7 @@ namespace stackful
             auto& promise = static_cast<stash_type&>( // safe cast
                 detail::stackful::context::currentStash()).promise();
 
-            ut_dcheck(promise.state() != PromiseBase::ST_Moved &&
+            ut_dcheck(promise.state() != PromiseBase::ST_Empty &&
                 "Promise already taken");
 
             ut_dcheck(promise.isCompletable() &&

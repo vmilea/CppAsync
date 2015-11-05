@@ -417,8 +417,8 @@ class PromiseBase
 public:
     enum State : uintptr_t
     {
-        // Invalid state: Promise has been moved into another object.
-        ST_Moved,
+        // Invalid state: Default / moved state
+        ST_Empty,
 
         // Invalid state: Operation has been canceled (Task handle destructed while attached).
         ST_OpCanceled,
@@ -472,6 +472,11 @@ class Promise
     , public PromiseMixin<R>
 {
 public:
+    Promise() _ut_noexcept
+    {
+        mState = ST_Empty;
+    }
+
     Promise(Promise&& other) _ut_noexcept
     {
         other.moveInto(*this);
@@ -530,7 +535,7 @@ public:
         ut_dcheck(isCompletable());
 
         task()->setPromise(nullptr);
-        mState = ST_Moved;
+        mState = ST_Empty;
     }
 
     void cancel() _ut_noexcept
@@ -586,7 +591,7 @@ private:
             task()->setPromise(&other);
 
         other.mState = mState;
-        mState = ST_Moved;
+        mState = ST_Empty;
     }
 
 
@@ -626,7 +631,10 @@ public:
     template <class ...Args>
     void operator()(Args&&... args) _ut_noexcept
     {
-        complete(std::forward<Args>(args)...);
+        auto& thiz = static_cast<Promise<R>&>(*this); // safe cast
+
+        if (thiz.isCompletable())
+            complete(std::forward<Args>(args)...);
     }
 };
 
@@ -643,7 +651,10 @@ public:
 
     void operator()() _ut_noexcept
     {
-        complete();
+        auto& thiz = static_cast<Promise<void>&>(*this); // safe cast
+
+        if (thiz.isCompletable())
+            complete();
     }
 };
 
@@ -694,22 +705,12 @@ public:
 
     void cancel() const _ut_noexcept
     {
-        if (mSharedPromise != nullptr) {
-            auto& promise = *mSharedPromise;
-
-            if (promise.isCompletable())
-                promise.cancel();
-        }
+        promise().cancel();
     }
 
     void fail(Error error) const _ut_noexcept
     {
-        if (mSharedPromise != nullptr) {
-            auto& promise = *mSharedPromise;
-
-            if (promise.isCompletable())
-                promise.fail(std::move(error));
-        }
+        promise().fail(std::move(error));
     }
 
 #ifdef UT_NO_EXCEPTIONS
@@ -727,8 +728,8 @@ public:
 
     Promise<R>& promise() const
     {
-        ut_dcheck(mSharedPromise &&
-            "SharedPromise has been moved");
+        ut_dcheck(mSharedPromise != nullptr &&
+            "SharedPromise is empty");
 
         return *mSharedPromise;
     }
@@ -760,18 +761,16 @@ public:
     {
         auto& thiz = static_cast<const SharedPromise<R>&>(*this); // safe cast
 
-        if (thiz.mSharedPromise != nullptr) {
-            auto& promise = *thiz.mSharedPromise;
-
-            if (promise.isCompletable())
-                promise.complete(std::forward<Args>(args)...);
-        }
+        thiz.promise().complete(std::forward<Args>(args)...);
     }
 
     template <class ...Args>
     void operator()(Args&&... args) const _ut_noexcept
     {
-        complete(std::forward<Args>(args)...);
+        auto& thiz = static_cast<const SharedPromise<R>&>(*this); // safe cast
+
+        if (thiz.mSharedPromise != nullptr)
+            thiz.promise()(std::forward<Args>(args)...);
     }
 };
 
@@ -783,17 +782,15 @@ public:
     {
         auto& thiz = static_cast<const SharedPromise<void>&>(*this); // safe cast
 
-        if (thiz.mSharedPromise != nullptr) {
-            auto& promise = *thiz.mSharedPromise;
-
-            if (promise.isCompletable())
-                promise.complete();
-        }
+        thiz.promise().complete();
     }
 
     void operator()() const _ut_noexcept
     {
-        complete();
+        auto& thiz = static_cast<const SharedPromise<void>&>(*this); // safe cast
+
+        if (thiz.mSharedPromise != nullptr)
+            thiz.promise()();
     }
 };
 

@@ -19,7 +19,6 @@
 #include "Common.h"
 #include "Assert.h"
 #include "../util/AllocElementPtr.h"
-#include "../util/Instance.h"
 #include "../util/Misc.h"
 #include "../util/TypeTraits.h"
 

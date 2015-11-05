@@ -22,7 +22,6 @@
 
 #include "Assert.h"
 #include "../util/Cast.h"
-#include "../util/Instance.h"
 #include "../util/StashFunction.h"
 #include "../StackfulCoroutine.h"
 
@@ -145,11 +144,11 @@ namespace detail
                 if (mHasResult)
                     result().~adapted_result_type();
 
-                auto state = mPromise->state();
+                auto state = mPromise.state();
 
                 switch (state)
                 {
-                case PromiseBase::ST_Moved:
+                case PromiseBase::ST_Empty:
                     // Promise has been taken over by user.
                     break;
                 case PromiseBase::ST_OpDone:
@@ -160,7 +159,7 @@ namespace detail
                         "Stackful coroutine may not delete itself while it is executing");
                     break;
                 case PromiseBase::ST_OpRunningDetached:
-                    // ST_Moved expected instead after completing a detached coroutine.
+                    // ST_Empty expected instead after completing a detached coroutine.
                     ut_assert(false);
                     break;
                 case PromiseBase::ST_OpCanceled:
@@ -179,13 +178,13 @@ namespace detail
 
             Promise<R>& promise() _ut_noexcept final
             {
-                return *mPromise;
+                return mPromise;
             }
 
             void start(CoroutineImplBase *coroutine, Promise<R>&& promise) _ut_noexcept
             {
                 mCoroutine = coroutine;
-                mPromise.initialize(std::move(promise));
+                mPromise = std::move(promise);
 
                 execute(nullptr);
             }
@@ -206,11 +205,11 @@ namespace detail
 
             void execute(AwaitableBase *resumer) _ut_noexcept
             {
-                ut_dcheck(mPromise->state() != PromiseBase::ST_Moved &&
+                ut_dcheck(mPromise.state() != PromiseBase::ST_Empty &&
                     "Async coroutine may not be resumed after taking over promise");
 
-                ut_assert(mPromise->state() == PromiseBase::ST_OpRunning
-                    || mPromise->state() == PromiseBase::ST_OpRunningDetached);
+                ut_assert(mPromise.state() == PromiseBase::ST_OpRunning
+                    || mPromise.state() == PromiseBase::ST_OpRunningDetached);
 
                 Error eptr;
                 try {
@@ -219,7 +218,7 @@ namespace detail
                     eptr = currentException();
                 }
 
-                auto state = mPromise->state();
+                auto state = mPromise.state();
 
                 if (mCoroutine->isDone()) {
                     if (eptr == nullptr) {
@@ -227,7 +226,7 @@ namespace detail
 
                         switch (state)
                         {
-                        case PromiseBase::ST_Moved:
+                        case PromiseBase::ST_Empty:
                             // Task has been taken over by user, nothing to do
                             break;
                         case PromiseBase::ST_OpDone:
@@ -238,11 +237,11 @@ namespace detail
                         case PromiseBase::ST_OpRunning:
                             // Complete the promise. TaskMaster will be notified and deallocate
                             // the coroutine.
-                            complete(*mPromise);
+                            complete(mPromise);
                             break;
                         case PromiseBase::ST_OpRunningDetached:
                             // There is no task attached. Put promise in a neutral state.
-                            { Promise<R> tmpPromise(std::move(*mPromise)); }
+                            { Promise<R> tmpPromise(std::move(mPromise)); }
                             // Deallocate self.
                             mCoroutine->deallocate();
                             break;
@@ -257,7 +256,7 @@ namespace detail
                     } else {
                         switch (state)
                         {
-                        case PromiseBase::ST_Moved:
+                        case PromiseBase::ST_Empty:
                             ut_dcheck(false &&
                                 "May not throw from async coroutine after taking over promise");
                             break;
@@ -268,7 +267,7 @@ namespace detail
                         case PromiseBase::ST_OpRunning:
                             // Complete the promise. TaskMaster will be notified and deallocate
                             // the coroutine.
-                            mPromise->fail(eptr);
+                            mPromise.fail(eptr);
                             break;
                         case PromiseBase::ST_OpRunningDetached:
                             try {
@@ -290,7 +289,7 @@ namespace detail
                         }
                     }
                 } else {
-                    ut_dcheck(state != PromiseBase::ST_Moved &&
+                    ut_dcheck(state != PromiseBase::ST_Empty &&
                         "Async coroutine must return immediately after taking over promise. "
                         "No further suspension allowed");
 
@@ -312,7 +311,7 @@ namespace detail
             }
 
             CoroutineImplBase *mCoroutine;
-            Instance<Promise<R>> mPromise;
+            Promise<R> mPromise;
             bool mHasResult;
             result_storage_type mResultData;
 
@@ -349,7 +348,7 @@ namespace detail
             PromiseBase& promise = context::currentStash().promise();
             (void) promise;
 
-            ut_dcheck(promise.state() != PromiseBase::ST_Moved &&
+            ut_dcheck(promise.state() != PromiseBase::ST_Empty &&
                 "May not await after taking promise");
 
             ut_assert(promise.isCompletable());

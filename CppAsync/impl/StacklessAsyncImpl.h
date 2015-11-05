@@ -17,7 +17,6 @@
 #pragma once
 
 #include "Common.h"
-#include "../util/Instance.h"
 #include "../util/Meta.h"
 #include "../StacklessCoroutine.h"
 #include "../Task.h"
@@ -27,7 +26,7 @@
 
 #define _ut_check_for_error(awt) \
     if (ut::detail::awaitable::hasError(awt)) { \
-        _ut_coroState.promise->fail(ut::detail::awaitable::takeError(awt)); \
+        _ut_coroState.promise.fail(ut::detail::awaitable::takeError(awt)); \
         return; \
     }
 
@@ -60,7 +59,7 @@ namespace detail
         {
             using result_type = R;
 
-            Instance<Promise<R>> promise;
+            Promise<R> promise;
             Awaiter *self;
             void *arg;
 
@@ -148,11 +147,11 @@ namespace detail
 
             ~AsyncCoroutineAwaiter()
             {
-                auto state = coroutine.frame().coroState().promise->state();
+                auto state = coroutine.frame().coroState().promise.state();
 
                 switch (state)
                 {
-                case PromiseBase::ST_Moved:
+                case PromiseBase::ST_Empty:
                     // Promise has been taken over by user.
                     break;
                 case PromiseBase::ST_OpDone:
@@ -163,7 +162,7 @@ namespace detail
                         "Stackless coroutine may not delete itself while it is executing");
                     break;
                 case PromiseBase::ST_OpRunningDetached:
-                    // ST_Moved expected instead after completing a detached coroutine.
+                    // ST_Empty expected instead after completing a detached coroutine.
                     ut_assert(false);
                     break;
                 case PromiseBase::ST_OpCanceled:
@@ -192,9 +191,9 @@ namespace detail
 
             void execute() _ut_noexcept
             {
-                Promise<result_type>& promise = *coroutine.frame().coroState().promise;
+                Promise<result_type>& promise = coroutine.frame().coroState().promise;
 
-                ut_dcheck(promise.state() != PromiseBase::ST_Moved &&
+                ut_dcheck(promise.state() != PromiseBase::ST_Empty &&
                     "Async coroutine may not be resumed after taking over promise");
 
                 ut_assert(promise.state() == PromiseBase::ST_OpRunning
@@ -211,7 +210,7 @@ namespace detail
                     if (isNil(context::loopbackException())) {
                         switch (state)
                         {
-                        case PromiseBase::ST_Moved:
+                        case PromiseBase::ST_Empty:
                             // Task has been taken over by user, nothing to do
                             break;
                         case PromiseBase::ST_OpDone:
@@ -242,7 +241,7 @@ namespace detail
 
                         switch (state)
                         {
-                        case PromiseBase::ST_Moved:
+                        case PromiseBase::ST_Empty:
                             ut_dcheck(false &&
                                 "May not throw from async coroutine after taking over promise");
                             break;
@@ -279,7 +278,7 @@ namespace detail
                     coroutine.frame().coroState().arg = nullptr;
                     state = promise.state();
 
-                    ut_dcheck(state != PromiseBase::ST_Moved &&
+                    ut_dcheck(state != PromiseBase::ST_Empty &&
                         "Async coroutine must return immediately after taking over promise. "
                         "No further suspension allowed");
 

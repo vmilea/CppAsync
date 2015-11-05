@@ -46,7 +46,7 @@ struct AsyncFrame;
 #define ut_return(result) \
     _ut_multi_line_macro_begin \
     \
-    _ut_coroState.promise->complete(result); \
+    _ut_coroState.promise.complete(result); \
     return; \
     \
     _ut_multi_line_macro_end
@@ -54,7 +54,7 @@ struct AsyncFrame;
 #define ut_return_error(error) \
     _ut_multi_line_macro_begin \
     \
-    _ut_coroState.promise->fail(error); \
+    _ut_coroState.promise.fail(error); \
     return; \
     \
     _ut_multi_line_macro_end
@@ -172,7 +172,7 @@ struct AsyncFrame : BasicFrame<AsyncCoroState<R>>
     {
         Promise<R>& promise = *this->coroState().promise;
 
-        ut_dcheck(promise.state() != PromiseBase::ST_Moved &&
+        ut_dcheck(promise.state() != PromiseBase::ST_Empty &&
             "Promise already taken");
 
         ut_dcheck(promise.isCompletable() &&
@@ -215,7 +215,7 @@ auto startAsyncOf(std::allocator_arg_t, const Alloc& alloc, Args&&... frameArgs)
     auto task = makeTaskWithListener<listener_type>(std::move(handle));
     awaiter_type& awaiter = *task.template listenerAs<listener_type>().resource;
     awaiter.coroutine.frame().coroState().self = &awaiter;
-    awaiter.coroutine.frame().coroState().promise.initialize(task.takePromise());
+    awaiter.coroutine.frame().coroState().promise = task.takePromise();
     awaiter.start();
 
     return task;
