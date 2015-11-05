@@ -35,10 +35,26 @@ namespace detail
         virtual R operator()(Args&&... args) const = 0;
     };
 
+    template <bool Unique, class Derived, class R, class ...Args>
+    struct SelectFunctionMixinImpl
+    {
+        using type = ut::CopyableMixin<IFunction<R, Args...>, Derived>;
+    };
+
+    template <class Derived, class R, class ...Args>
+    struct SelectFunctionMixinImpl<true, Derived, R, Args...>
+    {
+        using type = ut::UniqueMixin<IFunction<R, Args...>, Derived>;
+    };
+
+    template <bool Unique, class Derived, class R, class ...Args>
+    using SelectFunctionMixin = typename SelectFunctionMixinImpl<
+        Unique, Derived, R, Args...>::type;
+
     template <class F, class R, class ...Args>
     class FunctionAdapter
-        : public ut::CopyableMixin<IFunction<R, Args...>,
-            FunctionAdapter<F, R, Args...>>
+        : public SelectFunctionMixin<!std::is_copy_constructible<F>::value,
+            FunctionAdapter<F, R, Args...>, R, Args...>
     {
     public:
         explicit FunctionAdapter(const F& f)
@@ -69,8 +85,8 @@ namespace detail
 
     template <class F, class ...Args>
     class FunctionAdapter<F, void, Args...>
-        : public ut::CopyableMixin<IFunction<void, Args...>,
-            FunctionAdapter<F, void, Args...>>
+        : public SelectFunctionMixin<!std::is_copy_constructible<F>::value,
+            FunctionAdapter<F, void, Args...>, void, Args...>
     {
     public:
         explicit FunctionAdapter(const F& f)
@@ -101,8 +117,8 @@ namespace detail
 
     template <class R, class ...Args>
     class FunctionAdapter<R (*)(Args...), R, Args...>
-        : public ut::CopyableMixin<IFunction<R, Args...>,
-            FunctionAdapter<R (*)(Args...), R, Args...>>
+        : public SelectFunctionMixin<false,
+            FunctionAdapter<R (*)(Args...), R, Args...>, R, Args...>
     {
     public:
         using function_ptr_type = R (*)(Args...);
@@ -272,7 +288,7 @@ bool operator==(const ErasedFunction<Signature, Capacity>& a, std::nullptr_t) _u
 template <class Signature, std::size_t Capacity>
 bool operator!=(const ErasedFunction<Signature, Capacity>& a, std::nullptr_t) _ut_noexcept
 {
-    return !!a;
+    return a;
 }
 
 template <class Signature, std::size_t Capacity>
@@ -284,7 +300,7 @@ bool operator==(std::nullptr_t, const ErasedFunction<Signature, Capacity>& a) _u
 template <class Signature, std::size_t Capacity>
 bool operator!=(std::nullptr_t, const ErasedFunction<Signature, Capacity>& a) _ut_noexcept
 {
-    return !!a;
+    return a;
 }
 
 static const std::size_t default_function_capacity = ut::Max<

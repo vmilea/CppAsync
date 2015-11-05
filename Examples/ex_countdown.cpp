@@ -37,12 +37,9 @@ static ut::Task<void> asyncDelay(long milliseconds)
     // completion on the run loop.
 
     ut::Task<void> task;
-    auto promise = task.takePromise().share();
 
     // Finish task after delay.
-    sLooper.schedule([promise]() {
-        promise.complete();
-    }, milliseconds);
+    sLooper.schedule(task.takePromise(), milliseconds);
 
     return task;
 }
