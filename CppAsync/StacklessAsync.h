@@ -170,13 +170,13 @@ struct AsyncFrame : BasicFrame<AsyncCoroState<R>>
 
     Promise<R> takePromise() _ut_noexcept
     {
-        Promise<R>& promise = *this->coroState().promise;
+        Promise<R>& promise = this->coroState().promise;
 
         ut_dcheck(promise.state() != PromiseBase::ST_Empty &&
             "Promise already taken");
 
         ut_dcheck(promise.isCompletable() &&
-            "Can't take promise after detaching task");
+            "Can't take promise after detaching or canceling task");
 
         return std::move(promise);
     }
