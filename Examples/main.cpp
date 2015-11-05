@@ -17,12 +17,6 @@
 #include "Common.h"
 #include "util/IO.h"
 
-struct Example
-{
-    void (*function)();
-    const char *description;
-};
-
 void ex_fibo();
 void ex_countdown();
 void ex_abortableCountdown();
@@ -53,6 +47,12 @@ void ex_customAwaitable_s();
 void ex_fibo_n4402();
 void ex_countdown_n4402();
 #endif
+
+struct Example
+{
+    void (*function)();
+    const char *description;
+};
 
 static const Example EXAMPLES[] =
 {

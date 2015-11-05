@@ -22,6 +22,8 @@
 #include <CppAsync/StackfulAsync.h>
 #include <thread>
 
+namespace {
+
 // Custom run loop
 static util::Looper sLooper;
 
@@ -58,6 +60,8 @@ static ut::Task<std::string> asyncReadLine()
     }).detach();
 
     return task;
+}
+
 }
 
 void ex_abortableCountdown_s()

@@ -22,6 +22,8 @@
 #include <CppAsync/StacklessAsync.h>
 #include <boost/thread/thread.hpp>
 
+namespace {
+
 static void ping()
 {
     printf(".");
@@ -85,6 +87,8 @@ static ut::Task<void> asyncCountdown()
     };
 
     return ut::startAsyncOf<Frame>();
+}
+
 }
 
 void ex_customAwaitable()

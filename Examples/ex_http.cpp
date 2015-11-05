@@ -22,6 +22,8 @@
 #include <CppAsync/asio/Asio.h>
 #include <fstream>
 
+namespace {
+
 namespace asio {
     using namespace boost::asio;
     using namespace ut::asio;
@@ -88,6 +90,8 @@ static ut::Task<void> asyncHttpDownload(asio::streambuf& outBuf,
     };
 
     return ut::startAsyncOf<Frame>(outBuf, std::move(host), std::move(path));
+}
+
 }
 
 void ex_http()

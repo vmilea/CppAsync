@@ -25,7 +25,9 @@
 #include <CppAsync/experimental/CoroutineTraits.h>
 #include <climits>
 
-ut::Coroutine genFibo(int n) {
+namespace {
+
+static ut::Coroutine genFibo(int n) {
     int a = 0;
     int b = 1;
 
@@ -45,6 +47,8 @@ ut::Coroutine genFibo(int n) {
             throw std::runtime_error("overflow");
         }
     }
+}
+
 }
 
 void ex_fibo_n4402()

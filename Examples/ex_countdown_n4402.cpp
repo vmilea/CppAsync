@@ -25,6 +25,8 @@
 #include "util/Looper.h"
 #include <CppAsync/experimental/TaskCoroutineTraits.h>
 
+namespace {
+
 // Custom run loop
 static util::Looper sLooper;
 
@@ -57,6 +59,8 @@ static ut::Task<void> asyncCountdown(int n)
 
     // Stop pinging when done.
     sLooper.cancelAll();
+}
+
 }
 
 void ex_countdown_n4402()

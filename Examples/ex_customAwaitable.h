@@ -84,8 +84,7 @@ struct AwaitableTraits<boost::shared_future<R>>
             boost::rethrow_exception(fut.get_exception_ptr());
             assert(false);
             return std::exception_ptr();
-        }
-        catch (...) {
+        } catch (...) {
             return std::current_exception();
         }
     }

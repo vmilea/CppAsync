@@ -29,17 +29,17 @@
 #include <deque>
 #include <fstream>
 
+namespace {
+
 namespace asio {
     using namespace boost::asio;
     using namespace util::asio;
 }
 using asio::ip::tcp;
 
-static asio::io_service sIo;
-
-namespace {
-
 using namespace util::flickr;
+
+static asio::io_service sIo;
 
 //
 // Parallel downloader

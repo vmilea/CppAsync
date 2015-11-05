@@ -23,6 +23,8 @@
 #include <CppAsync/util/ScopeGuard.h>
 #include <boost/thread/thread.hpp>
 
+namespace {
+
 static void ping()
 {
     printf(".");
@@ -70,6 +72,8 @@ static ut::Task<void> asyncCountdown()
             printf("tick %d\n", result);
         }
     });
+}
+
 }
 
 void ex_customAwaitable_s()

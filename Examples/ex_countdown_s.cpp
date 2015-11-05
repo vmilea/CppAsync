@@ -21,6 +21,8 @@
 #include "util/Looper.h"
 #include <CppAsync/StackfulAsync.h>
 
+namespace {
+
 // Custom run loop
 static util::Looper sLooper;
 
@@ -38,6 +40,8 @@ static ut::Task<void> asyncDelay(long milliseconds)
     sLooper.schedule(task.takePromise(), milliseconds);
 
     return task;
+}
+
 }
 
 void ex_countdown_s()
