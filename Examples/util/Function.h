@@ -37,7 +37,7 @@ namespace detail
 
     template <class F, class R, class ...Args>
     class FunctionAdapter
-        : public ut::CopyableMovableMixin<IFunction<R, Args...>,
+        : public ut::CopyableMixin<IFunction<R, Args...>,
             FunctionAdapter<F, R, Args...>>
     {
     public:
@@ -69,7 +69,7 @@ namespace detail
 
     template <class F, class ...Args>
     class FunctionAdapter<F, void, Args...>
-        : public ut::CopyableMovableMixin<IFunction<void, Args...>,
+        : public ut::CopyableMixin<IFunction<void, Args...>,
             FunctionAdapter<F, void, Args...>>
     {
     public:
@@ -101,7 +101,7 @@ namespace detail
 
     template <class R, class ...Args>
     class FunctionAdapter<R (*)(Args...), R, Args...>
-        : public ut::CopyableMovableMixin<IFunction<R, Args...>,
+        : public ut::CopyableMixin<IFunction<R, Args...>,
             FunctionAdapter<R (*)(Args...), R, Args...>>
     {
     public:

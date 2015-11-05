@@ -100,7 +100,7 @@ private:
 
     template <class T>
     struct Adapter
-        : public MovableMixin<IAdapter, Adapter<T>>
+        : public UniqueMixin<IAdapter, Adapter<T>>
     {
         Adapter(T&& core)
             : mCore(std::move(core)) { }

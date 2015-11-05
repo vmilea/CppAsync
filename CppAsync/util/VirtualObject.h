@@ -99,24 +99,24 @@ private:
 };
 
 template <class Interface, class Derived, bool enforce_nothrow_move = true>
-class MovableMixin : public Interface
+class UniqueMixin : public Interface
 {
 public:
     // static_assert(std::is_move_constructible<Derived>::value,
     //     "Derived type must be move constructible");
 
-    MovableMixin() = default;
+    UniqueMixin() = default;
 
-    MovableMixin(MovableMixin&& /* other */) _ut_noexcept { }
+    UniqueMixin(UniqueMixin&& /* other */) _ut_noexcept { }
 
-    MovableMixin& operator=(MovableMixin&& /* other */) _ut_noexcept
+    UniqueMixin& operator=(UniqueMixin&& /* other */) _ut_noexcept
     {
         return *this;
     }
 
     void clone(void * /* into */) const final
     {
-        ut_check(false); // MovableMixin supports moving but not cloning
+        ut_check(false); // UniqueMixin supports moving but not cloning
     }
 
     void move(void *into) _ut_noexcept final
@@ -132,18 +132,18 @@ public:
     }
 
 private:
-    MovableMixin(const MovableMixin& other) = delete;
-    MovableMixin& operator=(const MovableMixin& other) = delete;
+    UniqueMixin(const UniqueMixin& other) = delete;
+    UniqueMixin& operator=(const UniqueMixin& other) = delete;
 };
 
 template <class Interface, class Derived, bool enforce_nothrow_move = true>
-class CopyableMovableMixin : public Interface
+class CopyableMixin : public Interface
 {
 public:
     // static_assert(IsCopyAndMoveConstructible<Derived>::value,
     //     "Derived type must be copy constructible and move constructible");
 
-    CopyableMovableMixin() = default;
+    CopyableMixin() = default;
 
     void clone(void *into) const final
     {

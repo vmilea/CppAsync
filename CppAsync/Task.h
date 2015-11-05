@@ -68,7 +68,7 @@ protected:
 };
 
 template <template <class ...> class Derived, class R = void, class ...Ts>
-using TaskListenerMixin = MovableMixin<ITaskListener<R>, Derived<R, Ts...>>;
+using TaskListenerMixin = UniqueMixin<ITaskListener<R>, Derived<R, Ts...>>;
 
 }
 

@@ -128,7 +128,7 @@ namespace detail
             TaskPromise(const TaskPromise& other) = delete;
             TaskPromise& operator=(const TaskPromise& other) = delete;
 
-            class Listener : public MovableMixin<ITaskListener<R>, Listener>
+            class Listener : public UniqueMixin<ITaskListener<R>, Listener>
             {
             public:
                 explicit Listener(TaskPromise<R> *taskPromise) _ut_noexcept
