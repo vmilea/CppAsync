@@ -22,7 +22,7 @@
 #include "ex_chatServer.h"
 #include <CppAsync/Combinators.h>
 #include <CppAsync/StackfulAsync.h>
-#include <CppAsync/asio/Asio.h>
+#include <CppAsync/Boost/Asio.h>
 #include <CppAsync/util/ScopeGuard.h>
 #include <cstdio>
 #include <deque>

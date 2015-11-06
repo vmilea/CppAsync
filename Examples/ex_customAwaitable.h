@@ -26,6 +26,8 @@
 #include <CppAsync/Awaitable.h>
 #include <boost/thread/future.hpp>
 
+namespace {
+
 namespace context
 {
     inline util::Looper& looper()
@@ -34,6 +36,8 @@ namespace context
         static util::Looper sLooper;
         return sLooper;
     }
+}
+
 }
 
 namespace ut {

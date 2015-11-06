@@ -19,7 +19,7 @@
 #ifdef HAVE_BOOST
 
 #include "../Common.h"
-#include <CppAsync/asio/Asio.h>
+#include <CppAsync/Boost/Asio.h>
 #include <string>
 
 #ifdef HAVE_OPENSSL

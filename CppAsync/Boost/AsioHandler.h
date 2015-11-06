@@ -25,10 +25,10 @@
 namespace ut { namespace asio {
 
 template <class R>
-class PromiseHandlerBase
+class AsioHandlerBase
 {
 public:
-    PromiseHandlerBase(Promise<R>&& promise) _ut_noexcept
+    AsioHandlerBase(Promise<R>&& promise) _ut_noexcept
         : mPromise(makeMoveOnCopy(std::move(promise))) { }
 
     template <class U>
@@ -49,10 +49,10 @@ private:
 };
 
 template <>
-class PromiseHandlerBase<void>
+class AsioHandlerBase<void>
 {
 public:
-    PromiseHandlerBase(Promise<void>&& promise) _ut_noexcept
+    AsioHandlerBase(Promise<void>&& promise) _ut_noexcept
         : mPromise(makeMoveOnCopy(std::move(promise))) { }
 
     void operator()(const boost::system::error_code& ec) const _ut_noexcept
@@ -72,19 +72,19 @@ private:
 };
 
 template <class R, class Context = Nothing>
-class PromiseHandler;
+class AsioHandler;
 
 template <class R>
-class PromiseHandler<R, std::shared_ptr<void>> : public PromiseHandlerBase<R>
+class AsioHandler<R, std::shared_ptr<void>> : public AsioHandlerBase<R>
 {
-    using base_type = PromiseHandlerBase<R>;
+    using base_type = AsioHandlerBase<R>;
 
 public:
-    PromiseHandler(Promise<R>&& promise) _ut_noexcept
+    AsioHandler(Promise<R>&& promise) _ut_noexcept
         : base_type(std::move(promise)) { }
 
     template <class U, class Alloc>
-    PromiseHandler(Promise<R>&& promise, const ContextRef<U, Alloc>& ctx) _ut_noexcept
+    AsioHandler(Promise<R>&& promise, const ContextRef<U, Alloc>& ctx) _ut_noexcept
         : base_type(std::move(promise))
         , mPtr(ctx.ptr()) { }
 
@@ -93,37 +93,37 @@ private:
 };
 
 template <class R>
-class PromiseHandler<R, Nothing> : public PromiseHandlerBase<R>
+class AsioHandler<R, Nothing> : public AsioHandlerBase<R>
 {
-    using base_type = PromiseHandlerBase<R>;
+    using base_type = AsioHandlerBase<R>;
 
 public:
-    PromiseHandler(Promise<R>&& promise) _ut_noexcept
+    AsioHandler(Promise<R>&& promise) _ut_noexcept
         : base_type(std::move(promise)) { }
 };
 
 template <class R>
-PromiseHandler<R> makeHandler(Promise<R>&& promise) _ut_noexcept
+AsioHandler<R> makeHandler(Promise<R>&& promise) _ut_noexcept
 {
-    return PromiseHandler<R>(std::move(promise));
+    return AsioHandler<R>(std::move(promise));
 }
 
 template <class R, class U, class Alloc>
 auto makeHandler(Promise<R>&& promise, const ContextRef<U, Alloc>& ctx) _ut_noexcept
-    -> PromiseHandler<R, std::shared_ptr<void>>
+    -> AsioHandler<R, std::shared_ptr<void>>
 {
-    return PromiseHandler<R, std::shared_ptr<void>>(std::move(promise), ctx);
+    return AsioHandler<R, std::shared_ptr<void>>(std::move(promise), ctx);
 }
 
 template <class R>
-PromiseHandler<R> makeHandler(Task<R>& task) _ut_noexcept
+AsioHandler<R> makeHandler(Task<R>& task) _ut_noexcept
 {
     return makeHandler(task.takePromise());
 }
 
 template <class R, class U, class Alloc>
 auto makeHandler(Task<R>& task, const ContextRef<U, Alloc>& ctx) _ut_noexcept
-    -> PromiseHandler<R, std::shared_ptr<void>>
+    -> AsioHandler<R, std::shared_ptr<void>>
 {
     return makeHandler(task.takePromise(), ctx);
 }

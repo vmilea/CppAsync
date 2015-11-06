@@ -53,9 +53,7 @@ static ut::Task<std::string> asyncReadLine()
         std::string line = util::readLine();
 
         // Finish the task on the main thread.
-        std::function<void ()> f = [promise, line] {
-            promise(line);
-        };
+        std::function<void ()> f = [promise, line]() { promise(line); };
         sLooper.schedule(std::move(f));
     }).detach();
 

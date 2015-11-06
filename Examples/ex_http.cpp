@@ -19,7 +19,7 @@
 #include "Common.h"
 #include "util/AsioHttp.h"
 #include <CppAsync/StacklessAsync.h>
-#include <CppAsync/asio/Asio.h>
+#include <CppAsync/Boost/Asio.h>
 #include <fstream>
 
 namespace {

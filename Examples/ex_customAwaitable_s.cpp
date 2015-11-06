@@ -18,7 +18,6 @@
 
 #include "Common.h"
 #include "ex_customAwaitable.h"
-#include <CppAsync/Scheduler.h>
 #include <CppAsync/StackfulAsync.h>
 #include <CppAsync/util/ScopeGuard.h>
 #include <boost/thread/thread.hpp>
