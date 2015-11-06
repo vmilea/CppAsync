@@ -26,8 +26,6 @@
 #include <CppAsync/Awaitable.h>
 #include <boost/thread/future.hpp>
 
-namespace {
-
 namespace context
 {
     inline util::Looper& looper()
@@ -36,8 +34,6 @@ namespace context
         static util::Looper sLooper;
         return sLooper;
     }
-}
-
 }
 
 namespace ut {
@@ -71,7 +67,9 @@ struct AwaitableTraits<boost::shared_future<R>>
             context::looper().post([next, awaiter]() {
                 // Break circular references.
                 *next = boost::future<void>();
+                assert(next.use_count() == 1);
 
+                // Awaiter may not be destroyed until the future is ready!
                 awaiter->resume(nullptr);
             });
         });

@@ -27,8 +27,9 @@ void ex_flickr();
 #endif
 void ex_chatServer();
 void ex_chatClient();
-#endif // HAVE_BOOST
+void ex_futureAsTask();
 void ex_customAwaitable();
+#endif // HAVE_BOOST
 
 #ifdef HAVE_BOOST_CONTEXT
 void ex_fibo_s();
@@ -40,6 +41,7 @@ void ex_flickr_s();
 #endif
 void ex_chatServer_s();
 void ex_chatClient_s();
+void ex_futureAsTask_s();
 void ex_customAwaitable_s();
 #endif // HAVE_BOOST_CONTEXT
 
@@ -66,8 +68,9 @@ static const Example EXAMPLES[] =
 #ifdef HAVE_OPENSSL
     { &ex_flickr,               "async - Flickr client" },
 #endif
-#endif // HAVE_BOOST
+    { &ex_futureAsTask,         "async - boost::future as task" },
     { &ex_customAwaitable,      "async - custom awaitable" },
+#endif // HAVE_BOOST
 
 #ifdef HAVE_BOOST_CONTEXT
     { &ex_fibo_s,               "coro  (stackful) - Fibonacci generator" },
@@ -79,6 +82,7 @@ static const Example EXAMPLES[] =
 #ifdef HAVE_OPENSSL
     { &ex_flickr_s,             "async (stackful) - Flickr client" },
 #endif
+    { &ex_futureAsTask_s,       "async (stackful) - boost::future as task" },
     { &ex_customAwaitable_s,    "async (stackful) - custom awaitable" },
 #endif // HAVE_BOOST_CONTEXT
 
