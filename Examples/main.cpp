@@ -45,7 +45,7 @@ void ex_futureAsTask_s();
 void ex_customAwaitable_s();
 #endif // HAVE_BOOST_CONTEXT
 
-#if defined(_MSC_VER) && _MSC_VER >= 1900
+#if defined(_MSC_VER) && _MSC_FULL_VER >= 190024120
 void ex_fibo_n4402();
 void ex_countdown_n4402();
 #endif
@@ -86,7 +86,7 @@ static const Example EXAMPLES[] =
     { &ex_customAwaitable_s,    "async (stackful) - custom awaitable" },
 #endif // HAVE_BOOST_CONTEXT
 
-#if defined(_MSC_VER) && _MSC_VER >= 1900
+#if defined(_MSC_VER) && _MSC_FULL_VER >= 190024120
     { &ex_fibo_n4402,           "coro  (C++17 resumable functions) - Fibonacci "
                                 "generator" },
     { &ex_countdown_n4402,      "async (C++17 resumable functions) - countdown" },

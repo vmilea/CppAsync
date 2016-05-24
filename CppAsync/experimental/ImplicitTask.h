@@ -16,7 +16,7 @@
 
 #pragma once
 
-#if defined(_MSC_VER) && _MSC_VER >= 1900
+#if defined(_MSC_VER) && _MSC_FULL_VER >= 190024120
 
 #include "../impl/Common.h"
 #include "../Task.h"

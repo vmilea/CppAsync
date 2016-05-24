@@ -14,16 +14,13 @@
 * limitations under the License.
 */
 
-#if defined(_MSC_VER) && _MSC_VER >= 1900
-
-#pragma warning(push)
-#pragma warning(disable : 4702) // unreachable code
-#pragma warning(disable : 4701) // potentially uninitialized local
+#if defined(_MSC_VER) && _MSC_FULL_VER >= 190024120
 
 #include "Common.h"
 #include "util/IO.h"
 #include "util/Looper.h"
 #include <CppAsync/experimental/TaskCoroutineTraits.h>
+#include <string>
 
 namespace {
 
@@ -46,13 +43,25 @@ static ut::Task<void> asyncDelay(long milliseconds)
     return task;
 }
 
+static ut::Task<void> asyncDelayedFail(long milliseconds)
+{
+    ut::Task<void> task;
+
+    // Fail task after delay.
+    sLooper.schedule([pr = task.takePromise()]() mutable {
+        pr.fail(std::runtime_error("asdasd"));
+    }, milliseconds);
+
+    return task;
+}
+
 static ut::Task<void> asyncCountdown(int n)
 {
     for (int i = n; i > 0; i--) {
         printf("%d\n", i);
 
         // Suspend for 1 second.
-        await asyncDelay(1000);
+        co_await asyncDelay(1000);
     }
 
     printf("liftoff!\n");
@@ -69,7 +78,7 @@ void ex_countdown_n4402()
     const int n = 5;
 
     // Create an async task on top of stackless 'resumable functions', which are a proposed
-    // addition to C++17. See: https://isocpp.org/files/papers/N4402.pdf.
+    // addition to C++17 or later. See: ISOCPP N4402 and P0057r03.
     ut::Task<void> task = asyncCountdown(n);
 
     // Print every 100ms to show the even loop is not blocked.
@@ -84,7 +93,5 @@ void ex_countdown_n4402()
 
     assert(task.isReady());
 }
-
-#pragma warning(pop)
 
 #endif

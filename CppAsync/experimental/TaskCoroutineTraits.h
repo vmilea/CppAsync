@@ -16,12 +16,12 @@
 
 #pragma once
 
-#if defined(_MSC_VER) && _MSC_VER >= 1900
+#if defined(_MSC_VER) && _MSC_FULL_VER >= 190024120
 
 #include "../impl/Common.h"
 #include "../util/Cast.h"
 #include "../Task.h"
-#include <experimental/resumable>
+#include <experimental/coroutine>
 
 namespace ut {
 
@@ -42,48 +42,57 @@ namespace detail
             using result_type = R;
             using coroutine_handle_type = std::experimental::coroutine_handle<TaskPromise>;
 
-            static TaskPromise& fromAwaitContext(void *awaitContext) _ut_noexcept
+            static TaskPromise& fromAwaitContext(void *awaitContext) noexcept
             {
                 return *static_cast<TaskPromise*>(awaitContext);
             }
 
-            TaskPromise() _ut_noexcept
+            TaskPromise() noexcept
                 : mContextCleaner(nullptr) { }
 
-            ~TaskPromise() _ut_noexcept
+            ~TaskPromise() noexcept
             {
                 if (mContextCleaner != nullptr)
                     mContextCleaner(&mAwaitContext);
             }
 
-            Task<R> get_return_object() _ut_noexcept
+            Task<R> get_return_object() noexcept
             {
                 auto task = ut::makeTaskWithListener<Listener>(this);
                 mPromise = task.takePromise();
 
                 resumeCoroutine();
 
-                return std::move(task);
+                return task;
             }
 
-            bool initial_suspend() const _ut_noexcept
+#ifdef UT_NO_EXCEPTIONS
+            static Task<R> get_return_object_on_allocation_failure() noexcept
             {
-                return true;
+                Task<R> task;
+                Task<R> tmp = std::move(task);
+                return task; // Return an invalid task.
             }
+#endif
 
-            bool final_suspend() const _ut_noexcept
+            auto initial_suspend() const noexcept
             {
-                return false;
+                return std::experimental::suspend_always();
             }
 
-            // Ignored in MSVC 14.0
-            //
-            // void set_exception(ut::Error error)
-            // {
-            //     mPromise.fail(std::move(error));
-            // }
+            auto final_suspend() const noexcept
+            {
+                return std::experimental::suspend_always();
+            }
 
-            AwaitContext* replaceAwaitContext(ContextCleaner contextCleaner) _ut_noexcept
+#ifndef UT_NO_EXCEPTIONS
+            void set_exception(ut::Error error)
+            {
+                mPromise.fail(std::move(error));
+            }
+#endif
+
+            AwaitContext* replaceAwaitContext(ContextCleaner contextCleaner) noexcept
             {
                 if (mContextCleaner != nullptr)
                     mContextCleaner(&mAwaitContext);
@@ -93,31 +102,24 @@ namespace detail
                 return &mAwaitContext;
             }
 
-            void resumeCoroutine() _ut_noexcept
+            void resumeCoroutine() noexcept
             {
                 ut_assert(mPromise.state() == PromiseBase::ST_OpRunning
                     || mPromise.state() == PromiseBase::ST_OpRunningDetached);
 
-                auto coro = coroutine_handle_type::from_promise(this);
-
-#ifdef UT_NO_EXCEPTIONS
+                auto coro = coroutine_handle_type::from_promise(*this);
                 coro.resume();
-#else
-                Error eptr;
-                try {
-                    coro.resume();
-                    return;
-                } catch (...) {
-                    eptr = currentException();
+
+                if (coro.done()) {
+                    ut_assert(mPromise.state() == ut::PromiseBase::ST_OpDone);
+                    coro.destroy();
                 }
-                interruptCoroutine(std::move(eptr));
-#endif
             }
 
-            void interruptCoroutine(Error error) _ut_noexcept
+            void interruptCoroutine(Error error) noexcept
             {
                 Promise<R> promise(std::move(mPromise));
-                coroutine_handle_type::from_promise(this).destroy();
+                coroutine_handle_type::from_promise(*this).destroy();
 
                 if (promise.isCompletable())
                     promise.fail(std::move(error));
@@ -130,13 +132,13 @@ namespace detail
             class Listener : public UniqueMixin<ITaskListener<R>, Listener>
             {
             public:
-                explicit Listener(TaskPromise<R> *taskPromise) _ut_noexcept
+                explicit Listener(TaskPromise<R> *taskPromise) noexcept
                     : mTaskPromise(taskPromise) { }
 
-                Listener(Listener&& other) _ut_noexcept
+                Listener(Listener&& other) noexcept
                     : mTaskPromise(movePtr(other.mTaskPromise)) { }
 
-                ~Listener() _ut_noexcept final
+                ~Listener() noexcept final
                 {
                     if (mTaskPromise != nullptr) {
                         // Interrupt coroutine.
@@ -146,16 +148,16 @@ namespace detail
 
                         ut_assert(mTaskPromise->mPromise.state() == ut::PromiseBase::ST_OpCanceled);
 
-                        coroutine_handle_type::from_promise(mTaskPromise).destroy();
+                        coroutine_handle_type::from_promise(*mTaskPromise).destroy();
                     }
                 }
 
-                void onDetach() _ut_noexcept final
+                void onDetach() noexcept final
                 {
                     mTaskPromise = nullptr;
                 }
 
-                void onDone(Task<R>& task) _ut_noexcept final
+                void onDone(Task<R>& task) noexcept final
                 {
                     mTaskPromise = nullptr;
                 }
@@ -175,7 +177,7 @@ namespace detail
         struct TaskPromiseMixin
         {
             template <class U>
-            void return_value(U&& value) _ut_noexcept
+            void return_value(U&& value) noexcept
             {
                 auto& thiz = static_cast<TaskPromise<R>&>(*this);
 
@@ -186,13 +188,127 @@ namespace detail
         template <>
         struct TaskPromiseMixin<void>
         {
-            void return_void() _ut_noexcept
+            void return_void() noexcept
             {
                 auto& thiz = static_cast<TaskPromise<void>&>(*this);
 
                 thiz.mPromise();
             }
         };
+
+        template <class R>
+        struct CoAwaiterMixin;
+
+        template <class R>
+        class CoAwaiter : public CoAwaiterMixin<R>
+        {
+        public:
+            CoAwaiter(CommonAwaitable<R>& awt)
+                : mAwt(awt) { }
+
+            bool await_ready() const noexcept
+            {
+                ut_dcheck(mAwt.isValid() &&
+                    "Can't await invalid objects");
+
+#ifdef UT_NO_EXCEPTIONS
+                return mAwt.hasError()
+                    // Suspend and destroy coroutine, then store error in Task.
+                    ? false
+                    // Suspend if result is not yet available.
+                    : mAwt.isReady();
+#else
+                // Suspend if result is not yet available.
+                return mAwt.isReady();
+#endif
+            }
+
+            template <class CoroutineResult>
+            void await_suspend(std::experimental::coroutine_handle<
+                experimental::TaskPromise<CoroutineResult>> coro) noexcept
+            {
+                using task_promise_type = experimental::TaskPromise<CoroutineResult>;
+
+                struct Awaiter : ut::Awaiter
+                {
+                    void resume(AwaitableBase *resumer) noexcept final
+                    {
+                        auto& taskPromise = task_promise_type::fromAwaitContext(this);
+
+#ifdef UT_NO_EXCEPTIONS
+                        if (resumer->hasError())
+                            // Destroy coroutine, then store error in Task.
+                            taskPromise.interruptCoroutine(std::move(resumer->error()));
+                        else
+                            // Resume and take result.
+                            taskPromise.resumeCoroutine();
+#else
+                        (void) resumer;
+                        // Resume and take result or throw exception.
+                        taskPromise.resumeCoroutine();
+#endif
+                    }
+                };
+
+                auto& taskPromise = coro.promise();
+
+#ifdef UT_NO_EXCEPTIONS
+                if (mAwt.hasError()) {
+                    // Destroy coroutine, then store error in Task.
+                    taskPromise.interruptCoroutine(std::move(mAwt.error()));
+                    return;
+                }
+#endif
+
+                auto *awaiter = new (taskPromise.replaceAwaitContext(nullptr)) Awaiter();
+                mAwt.setAwaiter(awaiter);
+
+                // No need for cleanup.
+                //
+                // auto cleaner = [](experimental::AwaitContext *awaitContext) {
+                //     ptrCast<Awaiter *>(awaitContext)->~Awaiter();
+                // });
+            }
+
+        private:
+            CommonAwaitable<R>& mAwt;
+
+            friend struct CoAwaiterMixin<R>;
+        };
+
+        template <class R>
+        struct CoAwaiterMixin
+        {
+            R&& await_resume()
+            {
+                auto& thiz = static_cast<CoAwaiter<R>&>(*this); // safe cast
+
+                return thiz.mAwt.get();
+            }
+        };
+
+        template <>
+        struct CoAwaiterMixin<void>
+        {
+            void await_resume()
+            {
+                auto& thiz = static_cast<CoAwaiter<void>&>(*this); // safe cast
+
+                thiz.mAwt.get();
+            }
+        };
+    }
+
+    template <class R>
+    auto operator co_await(CommonAwaitable<R>& awt) noexcept
+    {
+        return experimental::CoAwaiter<R>(awt);
+    }
+
+    template <class R>
+    auto operator co_await(CommonAwaitable<R>&& awt) noexcept // fine?
+    {
+        return experimental::CoAwaiter<R>(awt);
     }
 }
 
@@ -206,103 +322,12 @@ namespace experimental
     struct coroutine_traits<ut::Task<R>, Args...>
     {
         using promise_type = ut::detail::experimental::TaskPromise<R>;
-
-        template <class Alloc, class ...Args>
-        static Alloc get_allocator(std::allocator_arg_t, const Alloc& alloc, Args&&...)
-        {
-            return alloc;
-        }
-
-#ifdef UT_NO_EXCEPTIONS
-        static ut::Task<R> get_return_object_on_allocation_failure() _ut_noexcept
-        {
-            ut::Task<R> task;
-            ut::Task<R> tmp = std::move(task);
-            return task; // Return an invalid task.
-        }
-#endif
     };
+
+    // Custom allocators are supported by specializing coroutine_traits according
+    // to coroutine function signature. See CoroutineTraits.h for a sketch.
 }
 
-}
-
-namespace ut
-{
-    bool await_ready(AwaitableBase& awt) _ut_noexcept
-    {
-        ut_dcheck(awt.isValid() &&
-            "Can't await invalid objects");
-
-#ifdef UT_NO_EXCEPTIONS
-        return awt.hasError()
-            // Suspend and destroy coroutine, then store error in Task.
-            ? false
-            // Suspend if result is not yet available.
-            : awt.isReady();
-#else
-        // Suspend if result is not yet available.
-        return awt.isReady();
-#endif
-    }
-
-    template <class CoroutineResult>
-    void await_suspend(AwaitableBase& awt, std::experimental::coroutine_handle<
-        detail::experimental::TaskPromise<CoroutineResult>> coro) _ut_noexcept
-    {
-        using task_promise_type = detail::experimental::TaskPromise<CoroutineResult>;
-
-        struct Awaiter : ut::Awaiter
-        {
-            void resume(AwaitableBase *resumer) _ut_noexcept final
-            {
-                auto& taskPromise = task_promise_type::fromAwaitContext(this);
-
-#ifdef UT_NO_EXCEPTIONS
-                if (resumer->hasError())
-                    // Destroy coroutine, then store error in Task.
-                    taskPromise.interruptCoroutine(std::move(resumer->error()));
-                else
-                    // Resume and take result.
-                    taskPromise.resumeCoroutine();
-#else
-                (void) resumer;
-                // Resume and take result or throw exception.
-                taskPromise.resumeCoroutine();
-#endif
-            }
-        };
-
-        auto& taskPromise = coro.promise();
-
-#ifdef UT_NO_EXCEPTIONS
-        if (awt.hasError()) {
-            // Destroy coroutine, then store error in Task.
-            taskPromise.interruptCoroutine(std::move(awt.error()));
-            return;
-        }
-#endif
-
-        auto *awaiter = new (taskPromise.replaceAwaitContext(nullptr)) Awaiter();
-        awt.setAwaiter(awaiter);
-
-        // No need for cleanup.
-        //
-        // auto cleaner = [](detail::experimental::AwaitContext *awaitContext) {
-        //     ptrCast<Awaiter *>(awaitContext)->~Awaiter();
-        // });
-    }
-
-    template <class R, DisableIfVoid<R> = nullptr>
-    R&& await_resume(detail::CommonAwaitable<R>& awt)
-    {
-        return std::move(awt.get());
-    }
-
-    template <class R, EnableIfVoid<R> = nullptr>
-    void await_resume(detail::CommonAwaitable<R>& awt)
-    {
-        awt.get();
-    }
 }
 
 #endif

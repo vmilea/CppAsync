@@ -14,11 +14,7 @@
 * limitations under the License.
 */
 
-#if defined(_MSC_VER) && _MSC_VER >= 1900
-
-#pragma warning(push)
-#pragma warning(disable : 4702) // unreachable code
-#pragma warning(disable : 4701) // potentially uninitialized local
+#if defined(_MSC_VER) && _MSC_FULL_VER >= 190024120
 
 #include "Common.h"
 #include "util/IO.h"
@@ -33,19 +29,15 @@ static ut::Coroutine genFibo(int n) {
 
     for (int i = 0; i < n; i++) {
         // Suspend coroutine.
-        yield &b;
+        co_yield &b;
 
         // Coroutine has been resumed, generate next value.
         int t = a;
         a = b;
         b += t;
 
-        if (b < a) {
-            // WARNING: The implementation of resumable functions in MSVC 14.0 is incomplete and
-            //          doesn't deal with exceptions well. This example may fail miserably from
-            //          improper stack unwinding.
+        if (b < a)
             throw std::runtime_error("overflow");
-        }
     }
 }
 
@@ -56,8 +48,8 @@ void ex_fibo_n4402()
     // Generate an "infinite" Fibonacci sequence.
     const int n = INT_MAX;
 
-    // Create a coroutine on top of stackless 'resumable functions', which are a proposed addition
-    // to C++17. See: https://isocpp.org/files/papers/N4402.pdf.
+    // Create a coroutine on top of stackless 'resumable functions', which are a proposed
+    // addition to C++17 or later. See: ISOCPP N4402 and P0057r03.
     ut::Coroutine fibo = genFibo(n);
 
     try {
@@ -74,7 +66,5 @@ void ex_fibo_n4402()
         printf("exception: %s\n", e.what());
     }
 }
-
-#pragma warning(pop)
 
 #endif
