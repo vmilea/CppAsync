@@ -79,7 +79,7 @@ class StacklessCoroutine;
         try { \
             auto eptr = std::move(ut::detail::stackless::context::loopbackException()); \
             ut::reset(ut::detail::stackless::context::loopbackException()); \
-            ut::rethrowException(eptr); \
+            ut::rethrowException(std::move(eptr)); \
         } catch /* (const A& e) {
             ...
         } catch (const B& e) {
@@ -207,7 +207,7 @@ public:
             if (!isNil(loopbackException)) {
                 auto eptr = std::move(loopbackException);
                 reset(loopbackException);
-                rethrowException(eptr);
+                rethrowException(std::move(eptr));
             }
         }
 #endif

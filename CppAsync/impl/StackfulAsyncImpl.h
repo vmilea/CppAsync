@@ -271,7 +271,7 @@ namespace detail
                             break;
                         case PromiseBase::ST_OpRunningDetached:
                             try {
-                                rethrowException(eptr);
+                                rethrowException(std::move(eptr));
                             } catch (const std::exception& e) {
                                 fprintf(stderr, "[CPP-ASYNC] UNCAUGHT EXCEPTION: %s\n", e.what());
                             } catch (...) {

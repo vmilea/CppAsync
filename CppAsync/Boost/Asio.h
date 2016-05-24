@@ -54,7 +54,7 @@ namespace detail
 
                 if (subtask.hasError()) {
                     try {
-                        rethrowException(subtask.error());
+                        rethrowException(std::move(subtask.error()));
                     } catch (const boost::system::system_error& e) {
                         ec = e.code();
                         // Try next.

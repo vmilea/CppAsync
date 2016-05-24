@@ -18,6 +18,7 @@
 
 #include "../impl/Common.h"
 #include "../impl/Assert.h"
+#include "Cast.h"
 #include "TypeTraits.h"
 #include <cstdint>
 #include <new>
