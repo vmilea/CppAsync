@@ -26,7 +26,10 @@
 #include "../util/FunctionTraits.h"
 #include "../util/Meta.h"
 #include "../util/SmartPtr.h"
-#include <boost/context/all.hpp>
+#include <boost/context/detail/fcontext.hpp>
+#include <boost/context/fixedsize_stack.hpp>
+#include <boost/context/protected_fixedsize_stack.hpp>
+#include <boost/context/segmented_stack.hpp>
 
 namespace ut {
 
@@ -133,12 +136,12 @@ namespace detail
             CoroutineImplBase() _ut_noexcept
                 : mState(ST_NotStarted)
                 , mValue(nullptr)
-                , mFContext(boost::context::fcontext_t()) { }
+                , mFContext(boost::context::detail::fcontext_t()) { }
 
             CoroutineImplBase(void *sp, std::size_t size) _ut_noexcept
                 : CoroutineImplBase()
             {
-                mFContext = boost::context::make_fcontext(sp, size, &fcontextFunc);
+                mFContext = boost::context::detail::make_fcontext(sp, size, &fcontextFunc);
             }
 
             virtual ~CoroutineImplBase() _ut_noexcept
@@ -208,19 +211,19 @@ namespace detail
                 context::pushCoroutine(this);
 
                 mValue = nullptr;
-                mValue = jump(parent, *this, YieldData(YK_Result, arg)); // Suspend.
+                mValue = jump(parent, *this, YieldData(&parent.mFContext, YK_Result, arg)); // Suspend.
 
                 return !isDone();
             }
 
             void* yield_(void *value)
             {
-                return yield_(YieldData(YK_Result, value)); // Suspend.
+                return yield_(YieldData(&mFContext, YK_Result, value)); // Suspend.
             }
 
             void* yieldException_(Error *peptr)
             {
-                return yield_(YieldData(YK_Exception, peptr)); // Suspend.
+                return yield_(YieldData(&mFContext, YK_Exception, peptr)); // Suspend.
             }
 
         private:
@@ -243,21 +246,28 @@ namespace detail
 
             struct YieldData
             {
+                boost::context::detail::fcontext_t *from;
                 YieldKind kind;
                 void *value;
 
-                YieldData(YieldKind kind, void *value) _ut_noexcept
-                    : kind(kind)
+                YieldData(boost::context::detail::fcontext_t *from,
+                          YieldKind kind, void *value) _ut_noexcept
+                    : from(from)
+                    , kind(kind)
                     , value(value) { }
             };
 
-            static void fcontextFunc(intptr_t data) _ut_noexcept
+            static void fcontextFunc(boost::context::detail::transfer_t transfer) _ut_noexcept
             {
+                auto yInitial = ptrCast<YieldData *>(transfer.data); // safe cast
+
+                // Update fcontext of previous coroutine.
+                *yInitial->from = transfer.fctx;
+
                 CoroutineImplBase& thiz = *context::currentCoroutine();
 
                 Error *peptr = nullptr;
                 try {
-                    auto yInitial = ptrCast<YieldData *>(data); // safe cast
                     void *value = thiz.unpackYieldData(*yInitial);
                     thiz.start(value);
 
@@ -299,12 +309,17 @@ namespace detail
             {
                 ut_assert(&from != &to);
                 ut_assert(!to.isDone());
+                ut_assert(&from.mFContext == yData.from);
 
-                auto yReceived = reinterpret_cast<const YieldData*>( // safe cast
-                    boost::context::jump_fcontext(
-                        &from.mFContext, to.mFContext,
-                        reinterpret_cast<intptr_t>(&yData), // safe cast
-                        true)); // Suspend.
+                auto transfer = boost::context::detail::jump_fcontext(
+                    to.mFContext, const_cast<YieldData*>(&yData)); // Suspend.
+
+                auto yReceived = reinterpret_cast<const YieldData*>(transfer.data);
+
+                // Update fcontext of previous coroutine, which is not necessarily `to' (for
+                // example: if this coroutine yielded to its parent, the parent yielded as well,
+                // then the child got resumed straight from the main loop, bypassing its parent).
+                *yReceived->from = transfer.fctx;
 
                 return unpackYieldData(*yReceived);
             }
@@ -320,7 +335,7 @@ namespace detail
                     auto eptr = Error(*peptr);
                     delete peptr;
 
-                    rethrowException(eptr);
+                    rethrowException(std::move(eptr));
                     return nullptr;
                 } else {
                     ut_assert(yReceived.kind == YK_Result);
@@ -354,8 +369,8 @@ namespace detail
 
                 // Unwind.
                 try {
-                    jump(*parent, *this, YieldData(YK_Exception,
-                        new Error(ForcedUnwind::ptr())));
+                    jump(*parent, *this, YieldData(
+                        &parent->mFContext, YK_Exception, new Error(ForcedUnwind::ptr())));
                 } catch (...) {
                     ut_assert(false);
                 }
@@ -367,7 +382,7 @@ namespace detail
             State mState;
             void *mValue;
             void *mFunction;
-            boost::context::fcontext_t mFContext;
+            boost::context::detail::fcontext_t mFContext;
         };
 
         template <class F, class StackAllocator>
