@@ -28,7 +28,7 @@ Intuitively, coroutines are just functions that may be suspended and then resume
 
 This ability to yield to one another and be resumed, combined with ease of use and inherent efficiency, makes coroutines great for writing generators and coordinating async tasks.
 
-Languages like C#, Phython, JavaScript, Dart, and Lua already support coroutines in one form or another via `yield` or `async` / `await` operators. For C++ there is proposal [N4402](https://isocpp.org/files/papers/N4402.pdf)/[N4499](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4499.pdf) - Resumable Functions (a kind of stackless coroutines), which might become part of C++17. Here is where CppAsync comes in: it makes these constructs available to you right now in portable C++11, with an easy migration path to the baked-in version once it becomes supported by your target compilers.
+Languages like C#, Phython, JavaScript, Dart, and Lua already support coroutines in one form or another via `yield` or `async` / `await` operators. For C++ there is proposal [N4402](https://isocpp.org/files/papers/N4402.pdf)/[P0057](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2016/p0057r3.pdf) - Resumable Functions (a kind of stackless coroutines), which was supposed to be part of C++17 but got delayed. Here is where CppAsync comes in: it makes these constructs available to you right now in portable C++11, with an easy migration path to the baked-in version once it becomes supported by your target compilers.
 
 
 ## Overview
@@ -39,8 +39,8 @@ CppAsync has various applications (network or local I/O, responsive UI developme
 
 The library builds on top of a coroutine layer without being tied to any particular back-end. It supports:
 - Stackless coroutines based on [Duff's device](https://en.wikipedia.org/wiki/Duff%27s_device). They are 100% portable and have minimal overhead, but are somewhat clunky to write.
-- Stackful coroutines on top of Boost.Context. They are supported on [common architectures](http://www.boost.org/doc/libs/1_59_0/libs/context/doc/html/context/architectures.html), fast, simple to write, but harder to debug. For each stackful coroutine at least 4KB of address space has to be reserved.
-- Resumable functions as proposed in N4402. They are similar to the first back-end, with the compiler doing all the heavy lifting instead. There is preliminary support in Visual Studio 2015 (with exception handling notably left out).
+- Stackful coroutines on top of Boost.Context. They are supported on [common architectures](http://www.boost.org/doc/libs/1_61_0/libs/context/doc/html/context/architectures.html), fast, simple to write, but harder to debug. For each stackful coroutine at least 4KB of address space has to be reserved.
+- Resumable functions as described in ISOCPP P0057R3. They are similar to the first back-end, with the compiler doing all the heavy lifting instead. To preview this feature, install Visual Studio 2015 with the [latest toolchain](https://blogs.msdn.microsoft.com/vcblog/2016/04/26/stay-up-to-date-with-the-visual-c-tools-on-nuget/).
 
 Your application can use different kinds of coroutines under the common `ut::Coroutine` wrapper. You might start with a stackful implementation, then switch to stackless for efficiency.
 
