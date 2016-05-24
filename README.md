@@ -235,11 +235,11 @@ Each sample comes in both stackful and stackless version. If Boost.Context is mi
 
 ### Quick guide:
 
-1. Install [Boost](http://www.boost.org/users/download/) 1.58 or later. Either use [pre-built binaries](http://sourceforge.net/projects/boost/files/boost-binaries/), or build Boost.Context and Boost.Thread manually:
+1. Install [Boost](http://www.boost.org/users/download/) 1.61 or later. Either use [pre-built binaries](http://sourceforge.net/projects/boost/files/boost-binaries/), or build Boost.Context and Boost.Thread manually:
 
    - download and unpack Boost archive
    - `./bootstrap`
-   - `./b2 link=static --build-type=minimal --with-context --with-thread --toolset=your-toolset stage`
+   - `./b2 link=static --build-type=minimal --with-context --with-thread --with-chrono --toolset=your-toolset stage`
 
 2. Install [OpenSSL](https://www.openssl.org/source/). Use [pre-built binaries](https://www.openssl.org/community/binaries.html) or build yourself.
 
@@ -262,7 +262,7 @@ CppAsync should work with any reasonable C++11 compiler. It has been tested on:
    - GCC 5.2.0
    - Clang 3.7.0
 
-Optional stackful coroutines are provided by Boost.Context and supported on [common architectures](http://www.boost.org/doc/libs/1_59_0/libs/context/doc/html/context/architectures.html).
+Optional stackful coroutines are provided by Boost.Context and supported on [common architectures](http://www.boost.org/doc/libs/1_61_0/libs/context/doc/html/context/architectures.html).
 
 
 ## Authors

@@ -18,9 +18,6 @@
 
 #ifdef HAVE_BOOST
 
-#define BOOST_THREAD_PROVIDES_FUTURE
-#define BOOST_THREAD_PROVIDES_FUTURE_CONTINUATION
-
 #include "Common.h"
 #include "util/Looper.h"
 #include <CppAsync/Task.h>
@@ -77,31 +74,23 @@ inline ut::Task<R> futureAsTask(boost::future<R> future)
         detail::complete(task.takePromise(), future);
     } else {
         auto promise = task.takePromise().share();
-        auto next = std::make_shared<boost::future<void>>();
 
-        // Complete Task after continuation. Due to a quirk in Boost's future API we need to keep
-        // the `next` future alive until the continuation has run, otherwise it would block in its
-        // destructor.
-        *next = future.then(boost::launch::async,
-                [next, promise](boost::future<R> previous) {
+        // Complete Task after continuation.
+        // (warning: future.then() leaks, see https://svn.boost.org/trac/boost/ticket/12220)
+        future.then(boost::launch::async,
+                [promise](boost::future<R> previous) {
             assert(previous.is_ready());
 
             // Workaround for lack of move-capture in MSVC 12.0
             auto mvPrevious = ut::makeMoveOnCopy(std::move(previous));
 
             // Make sure completion happens on main thread.
-            std::function<void ()> f = [mvPrevious, next, promise]() {
-                // std::weak_ptr<boost::future<void> weakNext(next); // COMPILER STALL
-
-                // Break circular references.
-                *next = boost::future<void>();
-                assert(next.use_count() == 1);
-
+            std::function<void ()> f = [mvPrevious, promise]() {
                 // Nothing to do if Task got canceled in the meantime.
                 if (promise.isCompletable())
                     detail::complete(std::move(promise.promise()), *mvPrevious);
             };
-            context::looper().post(f);
+            context::looper().post(std::move(f));
         });
     }
 

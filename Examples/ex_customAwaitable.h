@@ -18,9 +18,6 @@
 
 #ifdef HAVE_BOOST
 
-#define BOOST_THREAD_PROVIDES_FUTURE
-#define BOOST_THREAD_PROVIDES_FUTURE_CONTINUATION
-
 #include "Common.h"
 #include "util/Looper.h"
 #include <CppAsync/Awaitable.h>
@@ -39,48 +36,45 @@ namespace context
 namespace ut {
 
 //
-// Teach library about boost::shared_future<R>. This can be done by specializing
-// either AwaitableTraits, or just the relevant shims (awaitable_isReady() & friends).
+// Teach library about boost::future<R>. This can be done by specializing either
+// AwaitableTraits, or just the relevant shims (awaitable_isReady() & friends).
 //
 
 template <class R>
-struct AwaitableTraits<boost::shared_future<R>>
+struct AwaitableTraits<boost::future<R>>
 {
-    static bool isReady(const boost::shared_future<R>& fut) _ut_noexcept
+    static bool isReady(const boost::future<R>& fut) _ut_noexcept
     {
         return !fut.valid() || fut.is_ready();
     }
 
-    static bool hasError(const boost::shared_future<R>& fut) _ut_noexcept
+    static bool hasError(const boost::future<R>& fut) _ut_noexcept
     {
         return fut.has_exception();
     }
 
-    static void setAwaiter(boost::shared_future<R>& fut, ut::Awaiter *awaiter) _ut_noexcept
+    static void setAwaiter(boost::future<R>& fut, ut::Awaiter *awaiter) _ut_noexcept
     {
-        // Futures returned by boost::shared_future<R>::then() will block in their destructor
-        // until completed. To avoid this we capture the returned future inside continuation.
-        auto next = std::make_shared<boost::future<void>>();
+        fut.then([&fut, awaiter](boost::future<R> previous) {
+            // Store result.
+            fut = std::move(previous);
 
-        *next = fut.then([next, awaiter](boost::shared_future<R> previous) {
             // Make sure resumal happens on main thread.
-            context::looper().post([next, awaiter]() {
-                // Break circular references.
-                *next = boost::future<void>();
-                assert(next.use_count() == 1);
-
-                // Awaiter may not be destroyed until the future is ready!
+            context::looper().post([awaiter]() {
+                // Awaiter context (including fut object) must not have been destroyed
+                // before resumal! For more complex use cases where cancellation needs to be
+                // supported, use Task<R> and Promise<R>.
                 awaiter->resume(nullptr);
             });
         });
     }
 
-    static R takeResult(boost::shared_future<R>& fut)
+    static R takeResult(boost::future<R>& fut)
     {
         return std::move(fut.get());
     }
 
-    static std::exception_ptr takeError(boost::shared_future<R>& fut) _ut_noexcept
+    static std::exception_ptr takeError(boost::future<R>& fut) _ut_noexcept
     {
         try {
             boost::rethrow_exception(fut.get_exception_ptr());

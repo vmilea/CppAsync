@@ -53,3 +53,5 @@ namespace boost
 }
 
 #endif // UT_NO_EXCEPTIONS
+
+#define BOOST_THREAD_VERSION 4

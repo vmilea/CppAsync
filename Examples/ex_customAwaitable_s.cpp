@@ -30,20 +30,19 @@ static void ping()
     context::looper().schedule(&ping, 100);
 }
 
-static boost::shared_future<int> startTick(int k)
+static boost::future<int> startTick(int k)
 {
-    boost::shared_future<int> future;
+    boost::future<int> future;
 
     if (k > 0) {
-        boost::packaged_task<int> pt([k]() {
-            boost::thread::sleep(
-                boost::get_system_time() + boost::posix_time::millisec(500));
+        boost::packaged_task<int ()> pt([k]() {
+            boost::this_thread::sleep_for(boost::chrono::milliseconds(500));
             return k;
         });
-        future = pt.get_future().share();
+        future = pt.get_future();
         boost::thread(std::move(pt)).detach();
     } else {
-        future = startTick(1).then([](boost::shared_future<int> previous) {
+        future = startTick(1).then([](boost::future<int> previous) {
             throw std::runtime_error("blow up!");
             return 0;
         });
@@ -59,7 +58,7 @@ static ut::Task<void> asyncCountdown()
         ut_scope_guard_([] { context::looper().cancelAll(); });
 
         for (int i = 3; i >= 0; i--) {
-            boost::shared_future<int> future = startTick(i);
+            boost::future<int> future = startTick(i);
 
             // Await future directly -- without wrapping in a ut::Task.
             int result = ut::stackful::await_(future);

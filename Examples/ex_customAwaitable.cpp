@@ -29,20 +29,19 @@ static void ping()
     context::looper().schedule(&ping, 100);
 }
 
-static boost::shared_future<int> startTick(int k)
+static boost::future<int> startTick(int k)
 {
-    boost::shared_future<int> future;
+    boost::future<int> future;
 
     if (k > 0) {
-        boost::packaged_task<int> pt([k]() {
-            boost::thread::sleep(
-                boost::get_system_time() + boost::posix_time::millisec(500));
+        boost::packaged_task<int ()> pt([k]() {
+            boost::this_thread::sleep_for(boost::chrono::milliseconds(500));
             return k;
         });
-        future = pt.get_future().share();
+        future = pt.get_future();
         boost::thread(std::move(pt)).detach();
     } else {
-        future = startTick(1).then([](boost::shared_future<int> previous) {
+        future = startTick(1).then([](boost::future<int> previous) {
             throw std::runtime_error("blow up!");
             return 0;
         });
@@ -82,7 +81,7 @@ static ut::Task<void> asyncCountdown()
 
     private:
         int i;
-        boost::shared_future<int> future;
+        boost::future<int> future;
     };
 
     return ut::startAsyncOf<Frame>();

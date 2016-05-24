@@ -16,9 +16,6 @@
 
 #ifdef HAVE_BOOST
 
-#define BOOST_THREAD_PROVIDES_FUTURE
-#define BOOST_THREAD_PROVIDES_FUTURE_CONTINUATION
-
 #include "Common.h"
 #include "ex_futureAsTask.h"
 #include "util/IO.h"
@@ -39,9 +36,8 @@ static boost::future<int> startTick(int k)
     boost::future<int> future;
 
     if (k > 0) {
-        boost::packaged_task<int> pt([k]() {
-            boost::thread::sleep(
-                boost::get_system_time() + boost::posix_time::millisec(500));
+        boost::packaged_task<int ()> pt([k]() {
+            boost::this_thread::sleep_for(boost::chrono::milliseconds(500));
             return k;
         });
         future = pt.get_future();
