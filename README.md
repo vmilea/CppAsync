@@ -22,7 +22,7 @@
 
 ## Pitch
 
-Couroutines are making a comeback. The increasing adoption of asynchronous APIs has been plagued by ever more obscure control flow -- the so-called 'callback hell'. Coroutines can be used to bring back the order of structured programming: plain `if` / `else` / `for` / `do` / `while` statements, scoped life-time, and exception handling instead of what might otherwise be incomprehensible chains of callbacks.
+Coroutines are making a comeback. The increasing adoption of asynchronous APIs has been plagued by ever more obscure control flow -- the so-called 'callback hell'. Coroutines can be used to bring back the order of structured programming: plain `if` / `else` / `for` / `do` / `while` statements, scoped life-time, and exception handling instead of what might otherwise be incomprehensible chains of callbacks.
 
 Intuitively, coroutines are just functions that may be suspended and then resumed. The function's state must be preserved while it is suspended, either on the heap (for so-called stackless coroutines), or on a separate stack (stackful coroutines). Suspension and resumal are cooperative -- there is no preemptive scheduling by the kernel. However, your application can easily coordinate thousands of coroutines on top of a single kernel thread.
 
